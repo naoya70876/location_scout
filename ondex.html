@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOCATION SCOUT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#000;--white:#fff;--gray-50:#f7f7f7;--gray-100:#f0f0f0;
+  --gray-200:#e0e0e0;--gray-400:#aaa;--gray-600:#555;--gray-800:#222;
+  --font-d:'Bebas Neue',sans-serif;
+  --font-m:'DM Mono',monospace;
+  --font-b:'Noto Sans JP',sans-serif;
+}
+html{font-size:13px}
+body{background:var(--white);color:var(--black);font-family:var(--font-b);font-weight:300;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:2px}
+::-webkit-scrollbar-thumb{background:var(--black)}
+
+/* ── HEADER ── */
+header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0;background:var(--white);z-index:200}
+.logo{font-family:var(--font-d);font-size:22px;letter-spacing:.08em}
+.project-input{font-family:var(--font-m);font-size:11px;border:none;outline:none;background:transparent;color:var(--gray-600);letter-spacing:.06em;flex:1}
+.project-input::placeholder{color:var(--gray-400)}
+.header-date{font-family:var(--font-m);font-size:10px;letter-spacing:.1em;color:var(--gray-400)}
+.hbtn{font-family:var(--font-m);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:6px 12px;border:1px solid var(--black);background:transparent;cursor:pointer;transition:all .15s}
+.hbtn:hover{background:var(--black);color:var(--white)}
+.hbtn.primary{background:var(--black);color:var(--white)}
+.hbtn.primary:hover{background:var(--gray-800)}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:260px 1fr 300px;flex:1;overflow:hidden}
+
+/* ── LEFT PANEL ── */
+.left{border-right:1px solid var(--black);display:flex;flex-direction:column;overflow:hidden}
+.panel-header{padding:12px 16px;border-bottom:1px solid var(--gray-200);flex-shrink:0}
+.panel-label{font-family:var(--font-m);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray-400);margin-bottom:8px}
+.search-wrap{position:relative}
+.search-input{width:100%;border:1px solid var(--gray-200);padding:7px 32px 7px 10px;font-family:var(--font-b);font-size:12px;font-weight:300;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--black)}
+.search-btn{position:absolute;right:0;top:0;bottom:0;width:32px;background:var(--black);border:none;cursor:pointer;color:var(--white);display:flex;align-items:center;justify-content:center;font-size:14px}
+.search-btn:hover{background:var(--gray-800)}
+
+/* Location list */
+.loc-list{flex:1;overflow-y:auto}
+.loc-item{padding:12px 16px;border-bottom:1px solid var(--gray-100);cursor:pointer;transition:background .1s;position:relative}
+.loc-item:hover{background:var(--gray-50)}
+.loc-item.active{background:var(--black)}
+.loc-item.active .loc-name,.loc-item.active .loc-coord,.loc-item.active .loc-meta{color:var(--white)}
+.loc-item.active .loc-coord{color:var(--gray-400)}
+.loc-num{font-family:var(--font-m);font-size:9px;letter-spacing:.12em;color:var(--gray-400);margin-bottom:3px}
+.loc-name{font-size:13px;font-weight:500;margin-bottom:2px}
+.loc-coord{font-family:var(--font-m);font-size:9px;color:var(--gray-400);letter-spacing:.04em;margin-bottom:4px}
+.loc-meta{font-family:var(--font-m);font-size:9px;color:var(--gray-600);letter-spacing:.05em}
+.loc-del{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:13px;color:var(--gray-400);cursor:pointer;padding:4px;display:none}
+.loc-item:hover .loc-del,.loc-item.active .loc-del{display:block}
+.loc-item.active .loc-del{color:var(--gray-400)}
+.loc-del:hover{color:var(--white)}
+
+/* Date/time panel */
+.dt-panel{border-top:1px solid var(--black);padding:14px 16px;flex-shrink:0}
+.dt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.dt-field label{font-family:var(--font-m);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--gray-400);display:block;margin-bottom:4px}
+.dt-field input,.dt-field select{width:100%;border:1px solid var(--gray-200);padding:6px 8px;font-family:var(--font-m);font-size:11px;outline:none;background:var(--white);color:var(--black);transition:border-color .15s}
+.dt-field input:focus,.dt-field select:focus{border-color:var(--black)}
+.add-loc-btn{width:100%;margin-top:10px;padding:9px;font-family:var(--font-m);font-size:10px;letter-spacing:.12em;text-transform:uppercase;border:1px dashed var(--gray-400);background:transparent;color:var(--gray-600);cursor:pointer;transition:all .15s}
+.add-loc-btn:hover{border-color:var(--black);color:var(--black)}
+
+/* ── MAP ── */
+.map-wrap{position:relative;overflow:hidden}
+#map{width:100%;height:100%;z-index:1}
+.map-overlay{position:absolute;top:12px;left:12px;z-index:10;background:var(--white);border:1px solid var(--black);padding:8px 12px;font-family:var(--font-m);font-size:10px;letter-spacing:.08em;pointer-events:none}
+.map-overlay span{color:var(--gray-600)}
+.map-mode-btn{position:absolute;bottom:12px;left:12px;z-index:10;display:flex;gap:6px}
+.map-mode-btn button{font-family:var(--font-m);font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;border:1px solid var(--black);background:var(--white);cursor:pointer;transition:all .15s}
+.map-mode-btn button:hover,.map-mode-btn button.active{background:var(--black);color:var(--white)}
+
+/* Sun arc path on map */
+.sun-path-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5}
+
+/* ── RIGHT PANEL ── */
+.right{border-left:1px solid var(--black);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
+.right-section{border-bottom:1px solid var(--gray-200);padding:14px 16px}
+.right-section:last-child{border-bottom:none;flex:1}
+.sec-label{font-family:var(--font-m);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray-400);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.dot{width:5px;height:5px;background:var(--black);border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Sun data */
+.sun-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sun-item{padding:8px 10px;border:1px solid var(--gray-100)}
+.sun-item-label{font-family:var(--font-m);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray-400);margin-bottom:3px}
+.sun-item-val{font-family:var(--font-m);font-size:13px;font-weight:500;color:var(--black)}
+.sun-item-sub{font-family:var(--font-m);font-size:9px;color:var(--gray-600);margin-top:1px}
+.sun-item.highlight{border-color:var(--black);background:var(--black)}
+.sun-item.highlight .sun-item-label,.sun-item.highlight .sun-item-val,.sun-item.highlight .sun-item-sub{color:var(--white)}
+.sun-item.gold{background:var(--black)}
+.sun-item.gold .sun-item-label{color:#c8a96e}
+.sun-item.gold .sun-item-val{color:var(--white)}
+
+/* Compass */
+.compass-wrap{display:flex;align-items:center;gap:16px;margin-bottom:10px}
+.compass{width:70px;height:70px;position:relative;flex-shrink:0}
+.compass svg{width:100%;height:100%}
+.compass-info{flex:1}
+.compass-deg{font-family:var(--font-d);font-size:32px;letter-spacing:.03em;line-height:1}
+.compass-dir{font-family:var(--font-m);font-size:10px;color:var(--gray-600);letter-spacing:.1em}
+.compass-alt{font-family:var(--font-m);font-size:10px;color:var(--gray-400);margin-top:2px}
+
+/* Sun timeline */
+.timeline{position:relative;height:28px;background:var(--gray-100);margin:8px 0;overflow:hidden}
+.timeline-bar{position:absolute;top:0;bottom:0}
+.tl-night{background:#0a0a0a}
+.tl-astro{background:#1a1a2e}
+.tl-nauti{background:#16213e}
+.tl-civil{background:#e8d5b7}
+.tl-golden{background:#f4b942;opacity:.8}
+.tl-day{background:#f0f0f0}
+.tl-marker{position:absolute;top:0;bottom:0;width:2px;background:var(--black);z-index:2}
+.tl-labels{display:flex;justify-content:space-between;font-family:var(--font-m);font-size:8px;color:var(--gray-400);margin-top:2px}
+
+/* Weather */
+.weather-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.weather-day{text-align:center;padding:6px 2px;border:1px solid var(--gray-100);cursor:pointer;transition:all .15s}
+.weather-day:hover{border-color:var(--gray-400)}
+.weather-day.best{border-color:var(--black);background:var(--black)}
+.weather-day.best .wd-date,.weather-day.best .wd-temp,.weather-day.best .wd-icon,.weather-day.best .wd-score{color:var(--white)}
+.wd-date{font-family:var(--font-m);font-size:8px;letter-spacing:.05em;color:var(--gray-400);margin-bottom:3px}
+.wd-icon{font-size:16px;margin-bottom:2px}
+.wd-temp{font-family:var(--font-m);font-size:10px;font-weight:500}
+.wd-score{font-family:var(--font-m);font-size:8px;color:var(--gray-600);margin-top:2px}
+.weather-now{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
+.wn-item{text-align:center;padding:6px;background:var(--gray-50)}
+.wn-label{font-family:var(--font-m);font-size:8px;color:var(--gray-400);letter-spacing:.1em;text-transform:uppercase}
+.wn-val{font-family:var(--font-m);font-size:12px;font-weight:500;margin-top:2px}
+
+/* Shadow calculator */
+.shadow-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.shadow-row label{font-family:var(--font-m);font-size:9px;letter-spacing:.12em;color:var(--gray-400);text-transform:uppercase;width:80px;flex-shrink:0}
+.shadow-row input{flex:1;border:1px solid var(--gray-200);padding:5px 8px;font-family:var(--font-m);font-size:11px;outline:none;transition:border .15s}
+.shadow-row input:focus{border-color:var(--black)}
+.shadow-result{background:var(--black);color:var(--white);padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
+.sr-label{font-family:var(--font-m);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-400)}
+.sr-val{font-family:var(--font-d);font-size:24px;letter-spacing:.04em}
+
+/* Notes */
+.notes-area{width:100%;border:1px solid var(--gray-200);padding:8px 10px;font-family:var(--font-b);font-size:12px;font-weight:300;resize:vertical;min-height:72px;outline:none;transition:border .15s;line-height:1.6}
+.notes-area:focus{border-color:var(--black)}
+
+/* AI section */
+.ai-prompt{width:100%;border:1px solid var(--gray-200);padding:7px 10px;font-family:var(--font-b);font-size:12px;font-weight:300;resize:none;min-height:56px;outline:none;line-height:1.6;transition:border .15s}
+.ai-prompt:focus{border-color:var(--black)}
+.ai-result{font-size:12px;line-height:1.7;color:var(--gray-800);margin-top:8px;font-weight:300}
+.ai-status{font-family:var(--font-m);font-size:9px;color:var(--gray-400);letter-spacing:.08em;min-height:14px;margin:4px 0}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;z-index:500;background:var(--black);color:var(--white);padding:10px 18px;font-family:var(--font-m);font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+
+/* Leaflet overrides */
+.leaflet-container{font-family:var(--font-b)}
+.leaflet-control-zoom a{font-family:var(--font-m)!important;font-size:14px!important}
+.custom-pin{width:24px;height:24px;background:var(--black);border:2px solid var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--white);font-family:var(--font-m);font-size:9px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer}
+.custom-pin.active-pin{background:var(--white);border-color:var(--black);color:var(--black)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">LOCATION SCOUT</div>
+  <input class="project-input" id="projectName" placeholder="PROJECT TITLE" maxlength="40" oninput="saveState()">
+  <span class="header-date" id="headerDate"></span>
+  <button class="hbtn" onclick="exportReport()">Export PDF</button>
+  <button class="hbtn primary" onclick="saveState()">Save</button>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="panel-header">
+      <div class="panel-label">Search Location</div>
+      <div class="search-wrap">
+        <input class="search-input" id="searchInput" placeholder="Address or place name..." onkeydown="if(event.key==='Enter')searchLocation()">
+        <button class="search-btn" onclick="searchLocation()" title="Search">⌕</button>
+      </div>
+    </div>
+
+    <div class="loc-list" id="locList"></div>
+
+    <div class="dt-panel">
+      <div class="panel-label">Date &amp; Time</div>
+      <div class="dt-grid">
+        <div class="dt-field">
+          <label>Date</label>
+          <input type="date" id="shootDate" onchange="onDateTimeChange()">
+        </div>
+        <div class="dt-field">
+          <label>Time</label>
+          <input type="time" id="shootTime" onchange="onDateTimeChange()">
+        </div>
+      </div>
+      <button class="add-loc-btn" onclick="startAddMode()">+ Click map to add location</button>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-wrap">
+    <div class="map-overlay" id="mapOverlay">
+      <span id="overlayText">Click map to add location pin</span>
+    </div>
+    <div id="map"></div>
+    <div class="map-mode-btn">
+      <button id="btnSunPath" onclick="toggleSunPath()" class="active">Sun Path</button>
+      <button id="btnShadow" onclick="toggleShadowMode()">Shadow Preview</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right" id="rightPanel">
+
+    <!-- Sun position -->
+    <div class="right-section">
+      <div class="sec-label"><div class="dot"></div> Sun Position</div>
+      <div class="compass-wrap">
+        <div class="compass">
+          <svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="35" cy="35" r="33" fill="none" stroke="#e0e0e0" stroke-width="1"/>
+            <text x="35" y="8" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">N</text>
+            <text x="35" y="65" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">S</text>
+            <text x="8" y="38" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">W</text>
+            <text x="62" y="38" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">E</text>
+            <line id="sunNeedle" x1="35" y1="35" x2="35" y2="10" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="35" cy="35" r="3" fill="#000"/>
+          </svg>
+        </div>
+        <div class="compass-info">
+          <div class="compass-deg" id="sunAzimuth">—°</div>
+          <div class="compass-dir" id="sunDirection">—</div>
+          <div class="compass-alt" id="sunAltitude">Altitude: —°</div>
+        </div>
+      </div>
+
+      <div class="sun-grid">
+        <div class="sun-item gold" id="magicHourItem">
+          <div class="sun-item-label">Golden Hour ↑</div>
+          <div class="sun-item-val" id="goldenRise">—</div>
+          <div class="sun-item-sub" id="goldenRiseDur">—</div>
+        </div>
+        <div class="sun-item gold">
+          <div class="sun-item-label">Golden Hour ↓</div>
+          <div class="sun-item-val" id="goldenSet">—</div>
+          <div class="sun-item-sub" id="goldenSetDur">—</div>
+        </div>
+        <div class="sun-item">
+          <div class="sun-item-label">Blue Hour ↑</div>
+          <div class="sun-item-val" id="blueRise">—</div>
+        </div>
+        <div class="sun-item">
+          <div class="sun-item-label">Blue Hour ↓</div>
+          <div class="sun-item-val" id="blueSet">—</div>
+        </div>
+        <div class="sun-item">
+          <div class="sun-item-label">Sunrise</div>
+          <div class="sun-item-val" id="sunrise">—</div>
+        </div>
+        <div class="sun-item">
+          <div class="sun-item-label">Sunset</div>
+          <div class="sun-item-val" id="sunset">—</div>
+        </div>
+        <div class="sun-item">
+          <div class="sun-item-label">Solar Noon</div>
+          <div class="sun-item-val" id="solarNoon">—</div>
+        </div>
+        <div class="sun-item">
+          <div class="sun-item-label">Day Length</div>
+          <div class="sun-item-val" id="dayLength">—</div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div style="margin-top:10px">
+        <div class="panel-label">Light Timeline</div>
+        <div class="timeline" id="lightTimeline"></div>
+        <div class="tl-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+      </div>
+    </div>
+
+    <!-- Weather -->
+    <div class="right-section">
+      <div class="sec-label">7-Day Forecast</div>
+      <div class="weather-grid" id="weatherGrid">
+        <div style="grid-column:1/-1;font-family:var(--font-m);font-size:10px;color:var(--gray-400);text-align:center;padding:10px">Select a location to load weather</div>
+      </div>
+      <div class="weather-now" id="weatherNow"></div>
+    </div>
+
+    <!-- Shadow calculator -->
+    <div class="right-section">
+      <div class="sec-label">Shadow Calculator</div>
+      <div class="shadow-row">
+        <label>Object H.</label>
+        <input type="number" id="objHeight" value="10" min="0.1" max="999" step="0.1" oninput="calcShadow()"> m
+      </div>
+      <div class="shadow-result">
+        <div>
+          <div class="sr-label">Shadow Length</div>
+          <div class="sr-val" id="shadowLen">— m</div>
+        </div>
+        <div>
+          <div class="sr-label">Direction</div>
+          <div class="sr-val" id="shadowDir">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="right-section">
+      <div class="sec-label">Location Notes</div>
+      <textarea class="notes-area" id="locNotes" placeholder="Access info, permits, contact details..." oninput="saveNoteForLocation()"></textarea>
+    </div>
+
+    <!-- AI Suggest -->
+    <div class="right-section">
+      <div class="sec-label"><div class="dot"></div> AI Scout Advisor</div>
+      <textarea class="ai-prompt" id="aiPromptInput" placeholder="Describe your scene (e.g. 'dramatic sunrise shot for a car commercial, need long shadows...')" rows="3"></textarea>
+      <div class="ai-status" id="aiStatus"></div>
+      <button class="hbtn" style="width:100%;font-size:10px;margin-top:4px" onclick="runAI()">Analyze &amp; Suggest ↗</button>
+      <div class="ai-result" id="aiResult"></div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ================================================================
+//  STATE
+// ================================================================
+let state = {
+  projectName: '',
+  locations: [],
+  activeLocId: null,
+  shootDate: '',
+  shootTime: '',
+};
+let map, markers = {}, sunPathLayer = null;
+let addMode = false, showSunPath = true;
+
+// ================================================================
+//  INIT
+// ================================================================
+function init() {
+  // Date/time defaults
+  const now = new Date();
+  state.shootDate = now.toISOString().slice(0,10);
+  state.shootTime = now.toTimeString().slice(0,5);
+
+  // Load saved state
+  const saved = localStorage.getItem('location_scout_v1');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      Object.assign(state, s);
+    } catch(e) {}
+  }
+
+  document.getElementById('projectName').value = state.projectName || '';
+  document.getElementById('shootDate').value = state.shootDate;
+  document.getElementById('shootTime').value = state.shootTime;
+  document.getElementById('headerDate').textContent = formatDateDisplay(state.shootDate);
+
+  initMap();
+  renderLocList();
+  if (state.activeLocId) {
+    const loc = state.locations.find(l => l.id === state.activeLocId);
+    if (loc) {
+      updateSunData(loc.lat, loc.lng);
+      fetchWeather(loc.lat, loc.lng);
+      document.getElementById('locNotes').value = loc.notes || '';
+    }
+  }
+}
+
+// ================================================================
+//  MAP
+// ================================================================
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([35.6812, 139.7671], 12);
+
+  // Black and white tile layer
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    maxZoom: 19,
+  }).addTo(map);
+
+  map.on('click', onMapClick);
+
+  // Re-add existing location markers
+  state.locations.forEach(loc => addMarker(loc));
+  if (state.activeLocId) {
+    const loc = state.locations.find(l => l.id === state.activeLocId);
+    if (loc) { map.setView([loc.lat, loc.lng], 14); updateSunPath(loc); }
+  }
+}
+
+function onMapClick(e) {
+  if (!addMode) return;
+  const { lat, lng } = e.latlng;
+  const id = uid();
+  const loc = { id, lat, lng, name: `Location ${state.locations.length + 1}`, notes: '' };
+  state.locations.push(loc);
+  state.activeLocId = id;
+  addMode = false;
+  document.getElementById('mapOverlay').querySelector('span').textContent = 'Click map to add location pin';
+  document.getElementById('addModeIndicator') && document.getElementById('addModeIndicator').remove();
+  addMarker(loc);
+  selectLocation(id);
+  saveState();
+  showToast('Location added');
+}
+
+function addMarker(loc) {
+  const isActive = loc.id === state.activeLocId;
+  const idx = state.locations.indexOf(loc) + 1;
+  const icon = L.divIcon({
+    html: `<div class="custom-pin ${isActive?'active-pin':''}">${idx}</div>`,
+    iconSize: [24,24], iconAnchor: [12,12], className: ''
+  });
+  const m = L.marker([loc.lat, loc.lng], {icon})
+    .addTo(map)
+    .on('click', () => selectLocation(loc.id));
+  markers[loc.id] = m;
+}
+
+function refreshMarkers() {
+  Object.values(markers).forEach(m => map.removeLayer(m));
+  markers = {};
+  state.locations.forEach(loc => addMarker(loc));
+}
+
+function startAddMode() {
+  addMode = true;
+  document.getElementById('mapOverlay').querySelector('span').textContent = '📍 Click on map to place pin';
+  showToast('Click on the map to add a pin');
+}
+
+function toggleSunPath() {
+  showSunPath = !showSunPath;
+  document.getElementById('btnSunPath').classList.toggle('active', showSunPath);
+  if (!showSunPath && sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+  else {
+    const loc = activeLoc();
+    if (loc) updateSunPath(loc);
+  }
+}
+
+function updateSunPath(loc) {
+  if (!showSunPath) return;
+  if (sunPathLayer) map.removeLayer(sunPathLayer);
+
+  const date = getShootDate();
+  const points = [];
+  const goldenPoints = [];
+
+  for (let h = 0; h <= 24; h += 0.25) {
+    const d = new Date(date);
+    d.setHours(Math.floor(h), (h % 1) * 60);
+    const pos = SunCalc.getPosition(d, loc.lat, loc.lng);
+    if (pos.altitude > 0) {
+      const dist = (1 - pos.altitude / (Math.PI/2)) * 0.08;
+      const rad = pos.azimuth;
+      const dlat = dist * Math.cos(rad) * (180 / Math.PI) / 111;
+      const dlng = dist * Math.sin(rad) * (180 / Math.PI) / (111 * Math.cos(loc.lat * Math.PI/180));
+      const pt = [loc.lat + dlat, loc.lng + dlng];
+      points.push(pt);
+      // Mark golden hour
+      if (pos.altitude < 0.17) goldenPoints.push(pt);
+    }
+  }
+
+  if (points.length < 2) return;
+  const group = L.layerGroup();
+  L.polyline(points, {color:'#000',weight:1.5,opacity:0.5,dashArray:'4 4'}).addTo(group);
+  if (goldenPoints.length > 1) {
+    L.polyline(goldenPoints, {color:'#f4b942',weight:3,opacity:0.8}).addTo(group);
+  }
+  // Current sun position dot
+  const now = getShootDateTime();
+  const curPos = SunCalc.getPosition(now, loc.lat, loc.lng);
+  if (curPos.altitude > 0) {
+    const dist2 = (1 - curPos.altitude / (Math.PI/2)) * 0.08;
+    const dlat2 = dist2 * Math.cos(curPos.azimuth) * (180/Math.PI)/111;
+    const dlng2 = dist2 * Math.sin(curPos.azimuth) * (180/Math.PI)/(111*Math.cos(loc.lat*Math.PI/180));
+    L.circleMarker([loc.lat+dlat2, loc.lng+dlng2], {
+      radius:6, color:'#000', fillColor:'#f4b942', fillOpacity:1, weight:2
+    }).addTo(group);
+  }
+  sunPathLayer = group;
+  group.addTo(map);
+}
+
+function toggleShadowMode() {
+  showToast('Adjust object height in Shadow Calculator →');
+}
+
+// ================================================================
+//  LOCATION MANAGEMENT
+// ================================================================
+function selectLocation(id) {
+  state.activeLocId = id;
+  const loc = activeLoc();
+  if (!loc) return;
+  refreshMarkers();
+  map.setView([loc.lat, loc.lng], 14);
+  updateSunData(loc.lat, loc.lng);
+  updateSunPath(loc);
+  fetchWeather(loc.lat, loc.lng);
+  document.getElementById('locNotes').value = loc.notes || '';
+  renderLocList();
+  saveState();
+}
+
+function deleteLocation(e, id) {
+  e.stopPropagation();
+  state.locations = state.locations.filter(l => l.id !== id);
+  if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
+  if (state.activeLocId === id) {
+    state.activeLocId = state.locations.length ? state.locations[0].id : null;
+    if (state.activeLocId) selectLocation(state.activeLocId);
+  }
+  if (sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+  refreshMarkers();
+  renderLocList();
+  saveState();
+}
+
+function saveNoteForLocation() {
+  const loc = activeLoc();
+  if (!loc) return;
+  loc.notes = document.getElementById('locNotes').value;
+  saveState();
+}
+
+function renderLocList() {
+  const el = document.getElementById('locList');
+  if (!state.locations.length) {
+    el.innerHTML = `<div style="padding:20px 16px;font-family:var(--font-m);font-size:10px;color:var(--gray-400);letter-spacing:.08em;text-align:center;text-transform:uppercase">No locations yet<br>Search or click map</div>`;
+    return;
+  }
+  el.innerHTML = state.locations.map((loc,i) => `
+    <div class="loc-item ${loc.id===state.activeLocId?'active':''}" onclick="selectLocation('${loc.id}')">
+      <div class="loc-num">LOCATION ${String(i+1).padStart(2,'0')}</div>
+      <div class="loc-name">${esc(loc.name)}</div>
+      <div class="loc-coord">${loc.lat.toFixed(4)}°, ${loc.lng.toFixed(4)}°</div>
+      ${loc.notes ? `<div class="loc-meta">📝 ${esc(loc.notes.slice(0,28))}${loc.notes.length>28?'…':''}</div>` : ''}
+      <button class="loc-del" onclick="deleteLocation(event,'${loc.id}')" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+// ================================================================
+//  SEARCH
+// ================================================================
+async function searchLocation() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  showToast('Searching...');
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`);
+    const data = await res.json();
+    if (!data.length) { showToast('Location not found'); return; }
+    const { lat, lon, display_name } = data[0];
+    const id = uid();
+    const name = display_name.split(',').slice(0,2).join(', ');
+    const loc = { id, lat: +lat, lng: +lon, name, notes: '' };
+    state.locations.push(loc);
+    state.activeLocId = id;
+    addMarker(loc);
+    selectLocation(id);
+    document.getElementById('searchInput').value = '';
+    showToast('Location added');
+  } catch(e) { showToast('Search failed'); }
+}
+
+// ================================================================
+//  SUN CALCULATIONS
+// ================================================================
+function updateSunData(lat, lng) {
+  const dt = getShootDateTime();
+  const pos = SunCalc.getPosition(dt, lat, lng);
+  const times = SunCalc.getTimes(dt, lat, lng);
+
+  // Azimuth (SunCalc gives azimuth from S, convert to N)
+  const azDeg = ((pos.azimuth * 180/Math.PI) + 180) % 360;
+  const altDeg = pos.altitude * 180/Math.PI;
+
+  document.getElementById('sunAzimuth').textContent = azDeg.toFixed(1) + '°';
+  document.getElementById('sunDirection').textContent = azimuthToDir(azDeg);
+  document.getElementById('sunAltitude').textContent = `Altitude: ${altDeg.toFixed(1)}°`;
+
+  // Rotate needle
+  const needle = document.getElementById('sunNeedle');
+  const rad = (azDeg - 180) * Math.PI/180;
+  const x2 = 35 + 24 * Math.sin(rad);
+  const y2 = 35 - 24 * Math.cos(rad);
+  needle.setAttribute('x2', x2.toFixed(1));
+  needle.setAttribute('y2', y2.toFixed(1));
+
+  // Golden / Blue hours
+  document.getElementById('goldenRise').textContent = formatTime(times.goldenHourEnd);
+  document.getElementById('goldenRiseDur').textContent = '~' + minutesBetween(times.sunrise, times.goldenHourEnd) + ' min';
+  document.getElementById('goldenSet').textContent = formatTime(times.goldenHour);
+  document.getElementById('goldenSetDur').textContent = '~' + minutesBetween(times.goldenHour, times.sunset) + ' min';
+  document.getElementById('blueRise').textContent = formatTime(times.nauticalTwilightEnd);
+  document.getElementById('blueSet').textContent = formatTime(times.nauticalTwilightStart);
+  document.getElementById('sunrise').textContent = formatTime(times.sunrise);
+  document.getElementById('sunset').textContent = formatTime(times.sunset);
+  document.getElementById('solarNoon').textContent = formatTime(times.solarNoon);
+  document.getElementById('dayLength').textContent = minutesBetween(times.sunrise, times.sunset) + ' min';
+
+  // Timeline
+  buildTimeline(times, lat, lng, dt);
+  // Shadow
+  calcShadow();
+}
+
+function buildTimeline(times, lat, lng, dt) {
+  const tl = document.getElementById('lightTimeline');
+  tl.innerHTML = '';
+  const toMin = d => isNaN(d) ? null : d.getHours()*60 + d.getMinutes();
+  const pct = m => m ? (m / (24*60) * 100).toFixed(2) + '%' : '0%';
+  const W = (a, b) => {
+    const am = toMin(a), bm = toMin(b);
+    if (!am || !bm || bm<=am) return '0%';
+    return ((bm-am)/(24*60)*100).toFixed(2) + '%';
+  };
+
+  const segments = [
+    {cls:'tl-astro', start: times.astronomicalDawn, end: times.nauticalTwilightEnd},
+    {cls:'tl-nauti', start: times.nauticalTwilightEnd, end: times.dawn},
+    {cls:'tl-civil', start: times.dawn, end: times.sunrise},
+    {cls:'tl-golden',start: times.sunrise, end: times.goldenHourEnd},
+    {cls:'tl-day',   start: times.goldenHourEnd, end: times.goldenHour},
+    {cls:'tl-golden',start: times.goldenHour, end: times.sunset},
+    {cls:'tl-civil', start: times.sunset, end: times.dusk},
+    {cls:'tl-nauti', start: times.dusk, end: times.nauticalTwilightStart},
+    {cls:'tl-astro', start: times.nauticalTwilightStart, end: times.astronomicalTwilightStart},
+  ];
+  segments.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'timeline-bar ' + s.cls;
+    div.style.left = pct(toMin(s.start));
+    div.style.width = W(s.start, s.end);
+    tl.appendChild(div);
+  });
+  // Current time marker
+  const now = dt;
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const marker = document.createElement('div');
+  marker.className = 'tl-marker';
+  marker.style.left = (nowMin / (24*60) * 100).toFixed(2) + '%';
+  tl.appendChild(marker);
+}
+
+function calcShadow() {
+  const loc = activeLoc();
+  if (!loc) return;
+  const objH = parseFloat(document.getElementById('objHeight').value) || 10;
+  const dt = getShootDateTime();
+  const pos = SunCalc.getPosition(dt, loc.lat, loc.lng);
+  const altDeg = pos.altitude * 180/Math.PI;
+  if (altDeg <= 0) {
+    document.getElementById('shadowLen').textContent = '∞';
+    document.getElementById('shadowDir').textContent = '—';
+    return;
+  }
+  const shadowLen = (objH / Math.tan(pos.altitude)).toFixed(1);
+  const azDeg = ((pos.azimuth * 180/Math.PI) + 180) % 360;
+  // Shadow falls opposite to sun
+  const shadowAz = (azDeg + 180) % 360;
+  document.getElementById('shadowLen').textContent = shadowLen + ' m';
+  document.getElementById('shadowDir').textContent = azimuthToDir(shadowAz);
+}
+
+// ================================================================
+//  WEATHER (Open-Meteo, free, no API key)
+// ================================================================
+async function fetchWeather(lat, lng) {
+  document.getElementById('weatherGrid').innerHTML = `<div style="grid-column:1/-1;font-family:var(--font-m);font-size:10px;color:var(--gray-400);text-align:center;padding:10px">Loading...</div>`;
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max,sunshine_duration&hourly=cloudcover&timezone=auto&forecast_days=7`;
+    const res = await fetch(url);
+    const data = await res.json();
+    renderWeather(data);
+  } catch(e) {
+    document.getElementById('weatherGrid').innerHTML = `<div style="grid-column:1/-1;font-family:var(--font-m);font-size:10px;color:var(--gray-400);text-align:center;padding:10px">Weather unavailable</div>`;
+  }
+}
+
+function renderWeather(data) {
+  const d = data.daily;
+  const days = d.time.length;
+  // Score each day for filming suitability
+  const scores = d.time.map((_,i) => {
+    const sun = (d.sunshine_duration[i] || 0) / 3600; // hours
+    const rain = d.precipitation_sum[i] || 0;
+    const wind = d.windspeed_10m_max[i] || 0;
+    let score = Math.min(100, Math.round(sun * 8 - rain * 15 - wind * 0.5 + 50));
+    return Math.max(0, score);
+  });
+  const bestIdx = scores.indexOf(Math.max(...scores));
+
+  const grid = document.getElementById('weatherGrid');
+  grid.innerHTML = d.time.map((t, i) => {
+    const date = new Date(t + 'T12:00:00');
+    const isBest = i === bestIdx;
+    return `<div class="weather-day ${isBest?'best':''}" title="${isBest?'Best shooting day':'Score: '+scores[i]}">
+      <div class="wd-date">${date.toLocaleDateString('en',{weekday:'short'})}<br>${date.getDate()}</div>
+      <div class="wd-icon">${wmoIcon(d.weathercode[i])}</div>
+      <div class="wd-temp">${Math.round(d.temperature_2m_max[i])}°</div>
+      <div class="wd-score">${isBest?'★ BEST':scores[i]+'pt'}</div>
+    </div>`;
+  }).join('');
+
+  // Today details
+  const now = document.getElementById('weatherNow');
+  now.innerHTML = `
+    <div class="wn-item"><div class="wn-label">Precip.</div><div class="wn-val">${d.precipitation_sum[0]}mm</div></div>
+    <div class="wn-item"><div class="wn-label">Wind</div><div class="wn-val">${d.windspeed_10m_max[0]}km/h</div></div>
+    <div class="wn-item"><div class="wn-label">Sunshine</div><div class="wn-val">${Math.round((d.sunshine_duration[0]||0)/3600)}h</div></div>
+  `;
+}
+
+function wmoIcon(code) {
+  if (code === 0) return '☀️';
+  if (code <= 2) return '🌤';
+  if (code <= 3) return '☁️';
+  if (code <= 49) return '🌫';
+  if (code <= 59) return '🌦';
+  if (code <= 69) return '🌧';
+  if (code <= 79) return '🌨';
+  if (code <= 82) return '🌧';
+  if (code <= 86) return '❄️';
+  return '⛈';
+}
+
+// ================================================================
+//  DATE / TIME
+// ================================================================
+function onDateTimeChange() {
+  state.shootDate = document.getElementById('shootDate').value;
+  state.shootTime = document.getElementById('shootTime').value;
+  document.getElementById('headerDate').textContent = formatDateDisplay(state.shootDate);
+  const loc = activeLoc();
+  if (loc) { updateSunData(loc.lat, loc.lng); updateSunPath(loc); }
+  saveState();
+}
+
+function getShootDate() {
+  return new Date(state.shootDate || new Date().toISOString().slice(0,10));
+}
+
+function getShootDateTime() {
+  const [y,mo,d] = (state.shootDate || new Date().toISOString().slice(0,10)).split('-').map(Number);
+  const [h,mi] = (state.shootTime || '12:00').split(':').map(Number);
+  return new Date(y, mo-1, d, h, mi);
+}
+
+// ================================================================
+//  AI (Claude API)
+// ================================================================
+async function runAI() {
+  const prompt = document.getElementById('aiPromptInput').value.trim();
+  if (!prompt) { showToast('Enter a scene description first'); return; }
+  const loc = activeLoc();
+  const btn = document.querySelectorAll('.hbtn')[document.querySelectorAll('.hbtn').length-1];
+
+  const contextParts = [];
+  if (loc) {
+    const dt = getShootDateTime();
+    const pos = SunCalc.getPosition(dt, loc.lat, loc.lng);
+    const times = SunCalc.getTimes(dt, loc.lat, loc.lng);
+    const altDeg = (pos.altitude * 180/Math.PI).toFixed(1);
+    const azDeg = (((pos.azimuth * 180/Math.PI) + 180) % 360).toFixed(1);
+    contextParts.push(`Location: ${loc.name} (${loc.lat.toFixed(4)}°, ${loc.lng.toFixed(4)}°)`);
+    contextParts.push(`Date/Time: ${state.shootDate} ${state.shootTime}`);
+    contextParts.push(`Sun: Azimuth ${azDeg}° (${azimuthToDir(+azDeg)}), Altitude ${altDeg}°`);
+    contextParts.push(`Golden Hour: ${formatTime(times.goldenHour)}–${formatTime(times.sunset)}`);
+    contextParts.push(`Sunrise: ${formatTime(times.sunrise)}, Sunset: ${formatTime(times.sunset)}`);
+  }
+
+  document.getElementById('aiStatus').textContent = 'Analyzing...';
+  document.getElementById('aiResult').textContent = '';
+
+  try {
+    const systemPrompt = `You are an expert cinematography location scout and director of photography. 
+Analyze the location data and scene requirements provided. Give concise, practical advice about:
+1. Best shooting times based on sun position
+2. Camera angles that use the light effectively  
+3. Potential challenges and solutions
+4. Specific timing recommendations
+Keep response under 200 words. Be specific and practical.`;
+
+    const userMsg = contextParts.length
+      ? `Scene: ${prompt}\n\nLocation data:\n${contextParts.join('\n')}`
+      : `Scene: ${prompt}`;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: [{role:'user', content: userMsg}]
+      })
+    });
+    const data = await res.json();
+    const text = data.content?.map(b => b.text||'').join('') || 'No response';
+    document.getElementById('aiResult').textContent = text;
+    document.getElementById('aiStatus').textContent = '✓ Analysis complete';
+  } catch(e) {
+    document.getElementById('aiStatus').textContent = 'Error — please try again';
+  }
+}
+
+// ================================================================
+//  EXPORT PDF
+// ================================================================
+function exportReport() {
+  const loc = activeLoc();
+  const date = formatDateDisplay(state.shootDate);
+  const project = state.projectName || 'Location Scout';
+
+  let html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>${project} — Scout Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+@page{size:A4;margin:15mm}
+body{font-family:'Noto Sans JP',sans-serif;font-weight:300;color:#000;font-size:11px}
+.header{border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end}
+.title{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:.05em}
+.meta{font-family:'DM Mono',monospace;font-size:9px;color:#555;text-align:right}
+.sec{margin-bottom:16px}
+.sec-title{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#aaa;border-bottom:.5px solid #e0e0e0;padding-bottom:4px;margin-bottom:8px}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.cell{border:.5px solid #e0e0e0;padding:7px 9px}
+.cell-label{font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:#aaa;margin-bottom:3px}
+.cell-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:500}
+.black-box{background:#000;color:#fff;padding:10px 14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.bb-item{}.bb-label{font-family:'DM Mono',monospace;font-size:8px;color:#aaa;letter-spacing:.1em;text-transform:uppercase;margin-bottom:2px}
+.bb-val{font-family:'DM Mono',monospace;font-size:13px}
+.notes-block{border:.5px solid #000;padding:10px;font-size:11px;line-height:1.7;min-height:60px}
+.loc-row{display:flex;gap:16px;margin-bottom:8px;padding-bottom:8px;border-bottom:.5px solid #e8e8e8}
+.loc-num{font-family:'DM Mono',monospace;font-size:9px;color:#aaa;width:80px;flex-shrink:0}
+.loc-name{flex:1;font-weight:500}
+.loc-coord{font-family:'DM Mono',monospace;font-size:9px;color:#888}
+</style></head><body>`;
+
+  html += `<div class="header"><div class="title">${esc(project).toUpperCase()}</div>
+  <div class="meta">${state.locations.length} LOCATIONS · ${date}<br>LOCATION SCOUT REPORT</div></div>`;
+
+  if (loc) {
+    const dt = getShootDateTime();
+    const pos = SunCalc.getPosition(dt, loc.lat, loc.lng);
+    const times = SunCalc.getTimes(dt, loc.lat, loc.lng);
+    const azDeg = (((pos.azimuth*180/Math.PI)+180)%360).toFixed(1);
+    const altDeg = (pos.altitude*180/Math.PI).toFixed(1);
+    const shadowLen = altDeg > 0
+      ? (parseFloat(document.getElementById('objHeight').value||10)/Math.tan(pos.altitude)).toFixed(1)+' m'
+      : '∞';
+
+    html += `<div class="sec"><div class="sec-title">Active Location — ${esc(loc.name)}</div>
+    <div class="grid">
+      <div class="cell"><div class="cell-label">Coordinates</div><div class="cell-val">${loc.lat.toFixed(4)}°<br>${loc.lng.toFixed(4)}°</div></div>
+      <div class="cell"><div class="cell-label">Sun Azimuth</div><div class="cell-val">${azDeg}°<br>${azimuthToDir(+azDeg)}</div></div>
+      <div class="cell"><div class="cell-label">Sun Altitude</div><div class="cell-val">${altDeg}°</div></div>
+      <div class="cell"><div class="cell-label">Shadow (10m)</div><div class="cell-val">${shadowLen}</div></div>
+    </div></div>`;
+
+    html += `<div class="black-box" style="margin-bottom:16px">
+      <div class="bb-item"><div class="bb-label">Golden Hour ↑</div><div class="bb-val">${formatTime(times.goldenHourEnd)}</div></div>
+      <div class="bb-item"><div class="bb-label">Golden Hour ↓</div><div class="bb-val">${formatTime(times.goldenHour)}</div></div>
+      <div class="bb-item"><div class="bb-label">Sunrise / Sunset</div><div class="bb-val">${formatTime(times.sunrise)} / ${formatTime(times.sunset)}</div></div>
+      <div class="bb-item"><div class="bb-label">Blue Hour ↑</div><div class="bb-val">${formatTime(times.nauticalTwilightEnd)}</div></div>
+      <div class="bb-item"><div class="bb-label">Blue Hour ↓</div><div class="bb-val">${formatTime(times.nauticalTwilightStart)}</div></div>
+      <div class="bb-item"><div class="bb-label">Solar Noon</div><div class="bb-val">${formatTime(times.solarNoon)}</div></div>
+    </div>`;
+
+    if (loc.notes) {
+      html += `<div class="sec"><div class="sec-title">Notes</div><div class="notes-block">${esc(loc.notes)}</div></div>`;
+    }
+  }
+
+  // All locations
+  if (state.locations.length > 1) {
+    html += `<div class="sec"><div class="sec-title">All Locations (${state.locations.length})</div>`;
+    state.locations.forEach((l, i) => {
+      html += `<div class="loc-row">
+        <span class="loc-num">LOC ${String(i+1).padStart(2,'0')}</span>
+        <span class="loc-name">${esc(l.name)}</span>
+        <span class="loc-coord">${l.lat.toFixed(4)}°, ${l.lng.toFixed(4)}°</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div style="margin-top:20px;padding-top:8px;border-top:.5px solid #ccc;font-family:'DM Mono',monospace;font-size:8px;color:#aaa;display:flex;justify-content:space-between">
+    <span>${esc(project).toUpperCase()} · LOCATION SCOUT REPORT</span><span>${date}</span></div>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  showToast('Report opened — use browser print to save PDF');
+}
+
+// ================================================================
+//  HELPERS
+// ================================================================
+function activeLoc() { return state.locations.find(l => l.id === state.activeLocId) || null; }
+function uid() { return Math.random().toString(36).slice(2,10); }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function saveState() {
+  state.projectName = document.getElementById('projectName').value;
+  localStorage.setItem('location_scout_v1', JSON.stringify(state));
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function formatTime(d) {
+  if (!d || isNaN(d)) return '—';
+  return d.toLocaleTimeString('en', {hour:'2-digit',minute:'2-digit',hour12:false});
+}
+function formatDateDisplay(s) {
+  if (!s) return '';
+  const d = new Date(s+'T12:00:00');
+  return d.toLocaleDateString('en', {year:'numeric',month:'short',day:'numeric'});
+}
+function minutesBetween(a, b) {
+  if (!a || !b || isNaN(a) || isNaN(b)) return '—';
+  return Math.round((b-a)/60000);
+}
+function azimuthToDir(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg/22.5) % 16];
+}
+
+// ================================================================
+//  EVENT LISTENERS
+// ================================================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { addMode = false; }
+  if ((e.metaKey||e.ctrlKey) && e.key === 's') { e.preventDefault(); saveState(); showToast('Saved'); }
+});
+
+init();
+</script>
+</body>
+</html>
