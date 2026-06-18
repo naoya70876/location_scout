@@ -387,14 +387,30 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
         <div class="sec-label">
           <div class="dot"></div> AI Scout Advisor
           <button onclick="toggleApiKeyRow()" title="API Key settings" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:11px;color:var(--gray-400);padding:0;line-height:1">🔑</button>
+          <button onclick="toggleAiHelp()" title="How to use" style="background:none;border:none;cursor:pointer;font-size:11px;color:var(--gray-400);padding:0 0 0 6px;line-height:1">?</button>
         </div>
+
+        <!-- Help text (hidden by default) -->
+        <div id="aiHelp" style="display:none;margin-bottom:8px;padding:8px;background:var(--gray-50);border:1px solid var(--gray-200)">
+          <div style="font-family:var(--font-m);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-400);margin-bottom:5px">How to use</div>
+          <div style="font-family:var(--font-b);font-size:11px;font-weight:300;line-height:1.65;color:var(--gray-800)">
+            Describe your scene in the text box (e.g. "dramatic sunset shot for a car commercial, need long shadows") then tap <strong>Analyze &amp; Suggest</strong>. Claude AI will analyze the sun position, golden hours, and shadow data for your selected location and give specific advice on timing and camera angles.
+          </div>
+          <div style="font-family:var(--font-m);font-size:8px;letter-spacing:.08em;color:var(--gray-600);margin-top:8px;padding-top:6px;border-top:1px solid var(--gray-200)">
+            <strong>INSIDE CLAUDE.AI</strong> — works automatically, no setup needed.<br>
+            <strong>STANDALONE FILE</strong> — tap 🔑, enter your API key from
+            <span style="text-decoration:underline">console.anthropic.com</span>, then tap Set.
+            Your key is saved locally and never leaves your device.
+          </div>
+        </div>
+
         <div class="ai-key-row" id="aiKeyRow" style="display:none">
           <input type="password" id="aiKeyInput" class="ai-key-field" placeholder="sk-ant-api…">
           <button class="hbtn" style="flex-shrink:0;padding:5px 10px" onclick="saveApiKey()">Set</button>
           <button class="hbtn" style="flex-shrink:0;padding:5px 8px;border-color:var(--gray-400);color:var(--gray-400)" onclick="clearApiKey()">✕</button>
         </div>
         <div class="ai-key-status" id="aiKeyStatus"></div>
-        <textarea class="ai-prompt" id="aiPromptInput" placeholder="Describe your scene (e.g. 'dramatic sunrise for car commercial…')"></textarea>
+        <textarea class="ai-prompt" id="aiPromptInput" placeholder="Describe your scene…  e.g. 夕日がきれいなドラマ的なシーン、長い影が欲しい"></textarea>
         <div class="ai-status" id="aiStatus"></div>
         <button class="hbtn" id="aiAnalyzeBtn" style="width:100%;font-size:10px;margin-top:4px" onclick="runAI()">Analyze &amp; Suggest ↗</button>
         <div class="ai-result" id="aiResult"></div>
@@ -455,6 +471,11 @@ function clearApiKey() {
   document.getElementById('aiKeyRow').style.display = 'none';
   updateAiKeyStatus();
   showToast('API key cleared');
+}
+
+function toggleAiHelp() {
+  const el = document.getElementById('aiHelp');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
 function toggleApiKeyRow() {
@@ -523,26 +544,27 @@ function initMap() {
   map = L.map('map', {
     zoomControl: false,
     minZoom: 4,
+    maxZoom: 19,
     worldCopyJump: false,
+    maxBoundsViscosity: 1.0,
   }).setView([35.6812, 139.7671], 12);
 
-  // Move zoom to top-right so it doesn't overlap the status overlay at top-left
   L.control.zoom({ position: 'topright' }).addTo(map);
 
-  // Black and white tile layer — noWrap prevents world repeating
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     maxZoom: 19,
+    minZoom: 4,
     noWrap: true,
+    bounds: [[-85, -180], [85, 180]],
   }).addTo(map);
 
-  // Restrict panning to valid world bounds
+  // Hard world bounds — maxBoundsViscosity:1.0 makes it a hard stop
   map.setMaxBounds([[-85, -180], [85, 180]]);
 
   map.on('click', onMapClick);
   map.on('mousemove', onMapMouseMove);
 
-  // Re-add existing location markers
   state.locations.forEach(loc => addMarker(loc));
   if (state.activeLocId) {
     const loc = state.locations.find(l => l.id === state.activeLocId);
@@ -655,33 +677,37 @@ function updateSunPath(loc) {
     const pos = SunCalc.getPosition(d, loc.lat, loc.lng);
     if (pos.altitude > 0) {
       const dist = (1 - pos.altitude / (Math.PI/2)) * 0.08;
-      const rad = pos.azimuth;
+      // SunCalc azimuth is from south CCW; add π so the arc appears on the
+      // sun's actual side (opposite of shadow side)
+      const rad = pos.azimuth + Math.PI;
       const dlat = dist * Math.cos(rad) * (180 / Math.PI) / 111;
       const dlng = dist * Math.sin(rad) * (180 / Math.PI) / (111 * Math.cos(loc.lat * Math.PI/180));
       const pt = [loc.lat + dlat, loc.lng + dlng];
       points.push(pt);
-      // Mark golden hour
       if (pos.altitude < 0.17) goldenPoints.push(pt);
     }
   }
 
   if (points.length < 2) return;
   const group = L.layerGroup();
-  L.polyline(points, {color:'#000',weight:1.5,opacity:0.5,dashArray:'4 4'}).addTo(group);
+  L.polyline(points, {color:'#000', weight:1.5, opacity:0.5, dashArray:'4 4'}).addTo(group);
   if (goldenPoints.length > 1) {
-    L.polyline(goldenPoints, {color:'#f4b942',weight:3,opacity:0.8}).addTo(group);
+    L.polyline(goldenPoints, {color:'#f4b942', weight:3, opacity:0.8}).addTo(group);
   }
-  // Current sun position dot
+
+  // Current sun position dot — also corrected with +π
   const now = getShootDateTime();
   const curPos = SunCalc.getPosition(now, loc.lat, loc.lng);
   if (curPos.altitude > 0) {
     const dist2 = (1 - curPos.altitude / (Math.PI/2)) * 0.08;
-    const dlat2 = dist2 * Math.cos(curPos.azimuth) * (180/Math.PI)/111;
-    const dlng2 = dist2 * Math.sin(curPos.azimuth) * (180/Math.PI)/(111*Math.cos(loc.lat*Math.PI/180));
+    const rad2 = curPos.azimuth + Math.PI;
+    const dlat2 = dist2 * Math.cos(rad2) * (180/Math.PI)/111;
+    const dlng2 = dist2 * Math.sin(rad2) * (180/Math.PI)/(111*Math.cos(loc.lat*Math.PI/180));
     L.circleMarker([loc.lat+dlat2, loc.lng+dlng2], {
       radius:6, color:'#000', fillColor:'#f4b942', fillOpacity:1, weight:2
     }).addTo(group);
   }
+
   sunPathLayer = group;
   group.addTo(map);
 }
@@ -1180,15 +1206,24 @@ Keep response under 200 words. Be specific and practical.`;
     document.getElementById('aiResult').textContent = text;
     document.getElementById('aiStatus').textContent = '✓ Analysis complete';
   } catch(e) {
-    const msg = e.message || 'Unknown error';
-    document.getElementById('aiStatus').textContent = `✗ ${msg}`;
-    document.getElementById('aiResult').textContent = '';
-    // If no key set, prompt the user
-    if (msg.includes('API key') || msg.includes('fetch') || msg.includes('NetworkError')) {
+    const raw = e.message || 'Unknown error';
+    let display = `✗ ${raw}`;
+    // Provide actionable messages per error type
+    if (raw.toLowerCase().includes('failed to fetch') || raw.toLowerCase().includes('networkerror') || raw.toLowerCase().includes('cors')) {
+      display = '✗ Network error — CORS blocked by browser';
       if (!getApiKey()) {
+        display += '. Enter your API key (tap 🔑) for standalone use, or open inside Claude.ai.';
         document.getElementById('aiKeyRow').style.display = 'flex';
+        document.getElementById('aiHelp').style.display = 'block';
+      } else {
+        display += '. Try opening via a local server (python -m http.server), or use inside Claude.ai.';
       }
+    } else if (raw.includes('API key') || raw.includes('401') || raw.includes('403')) {
+      display = '✗ API key invalid or missing — tap 🔑 to update.';
+      document.getElementById('aiKeyRow').style.display = 'flex';
     }
+    document.getElementById('aiStatus').textContent = display;
+    document.getElementById('aiResult').textContent = '';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Analyze & Suggest ↗';
