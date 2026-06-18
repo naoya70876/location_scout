@@ -199,6 +199,9 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
 /* ── LOCATION RENAME ── */
 .loc-name[contenteditable="true"]{outline:none;border-bottom:1px solid var(--white);min-width:60px;cursor:text}
 .loc-item:not(.active) .loc-name[contenteditable="true"]{border-bottom-color:var(--black)}
+.loc-item.active .loc-name:not([contenteditable="true"]){cursor:text}
+.loc-item.active .loc-name::after{content:' ✎';font-size:9px;opacity:0;transition:opacity .2s;font-weight:300}
+.loc-item.active:hover .loc-name::after{opacity:.4}
 
 /* ── WEATHER DAY CLICK ── */
 .weather-day{cursor:pointer}
@@ -388,6 +391,7 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
         <div class="ai-key-row" id="aiKeyRow" style="display:none">
           <input type="password" id="aiKeyInput" class="ai-key-field" placeholder="sk-ant-api…">
           <button class="hbtn" style="flex-shrink:0;padding:5px 10px" onclick="saveApiKey()">Set</button>
+          <button class="hbtn" style="flex-shrink:0;padding:5px 8px;border-color:var(--gray-400);color:var(--gray-400)" onclick="clearApiKey()">✕</button>
         </div>
         <div class="ai-key-status" id="aiKeyStatus"></div>
         <textarea class="ai-prompt" id="aiPromptInput" placeholder="Describe your scene (e.g. 'dramatic sunrise for car commercial…')"></textarea>
@@ -434,12 +438,23 @@ function getApiKey() { return localStorage.getItem('ls_api_key_v1') || ''; }
 
 function saveApiKey() {
   const k = document.getElementById('aiKeyInput').value.trim();
-  if (k) localStorage.setItem('ls_api_key_v1', k);
-  else localStorage.removeItem('ls_api_key_v1');
+  document.getElementById('aiKeyInput').value = '';
+  document.getElementById('aiKeyRow').style.display = 'none';
+  if (k) {
+    // Only save if user actually typed something
+    localStorage.setItem('ls_api_key_v1', k);
+    showToast('API key saved');
+  }
+  // If field is empty, silently close without changing existing key
+  updateAiKeyStatus();
+}
+
+function clearApiKey() {
+  localStorage.removeItem('ls_api_key_v1');
   document.getElementById('aiKeyInput').value = '';
   document.getElementById('aiKeyRow').style.display = 'none';
   updateAiKeyStatus();
-  showToast(k ? 'API key saved' : 'API key cleared');
+  showToast('API key cleared');
 }
 
 function toggleApiKeyRow() {
@@ -453,7 +468,7 @@ function updateAiKeyStatus() {
   if (!el) return;
   const key = getApiKey();
   if (key) {
-    el.textContent = '🔑 API key configured';
+    el.textContent = '🔑 API key configured — tap 🔑 to change or ✕ to clear';
     el.style.color = 'var(--gray-600)';
   } else {
     el.textContent = 'No API key — tap 🔑 to configure for standalone use';
@@ -465,17 +480,20 @@ function updateAiKeyStatus() {
 //  INIT
 // ================================================================
 function init() {
-  // Date/time defaults
+  // Always use current date/time as default (don't restore stale saved time)
   const now = new Date();
   state.shootDate = now.toISOString().slice(0,10);
   state.shootTime = now.toTimeString().slice(0,5);
 
-  // Load saved state
+  // Load saved state — restore locations/project but NOT the shoot time
   const saved = localStorage.getItem('location_scout_v1');
   if (saved) {
     try {
       const s = JSON.parse(saved);
       Object.assign(state, s);
+      // Always reset to current time so shadows match real-world conditions
+      state.shootDate = now.toISOString().slice(0,10);
+      state.shootTime = now.toTimeString().slice(0,5);
     } catch(e) {}
   }
 
@@ -502,16 +520,24 @@ function init() {
 //  MAP
 // ================================================================
 function initMap() {
-  map = L.map('map', { zoomControl: false }).setView([35.6812, 139.7671], 12);
+  map = L.map('map', {
+    zoomControl: false,
+    minZoom: 4,
+    worldCopyJump: false,
+  }).setView([35.6812, 139.7671], 12);
 
   // Move zoom to top-right so it doesn't overlap the status overlay at top-left
   L.control.zoom({ position: 'topright' }).addTo(map);
 
-  // Black and white tile layer
+  // Black and white tile layer — noWrap prevents world repeating
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
     attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
     maxZoom: 19,
+    noWrap: true,
   }).addTo(map);
+
+  // Restrict panning to valid world bounds
+  map.setMaxBounds([[-85, -180], [85, 180]]);
 
   map.on('click', onMapClick);
   map.on('mousemove', onMapMouseMove);
@@ -688,6 +714,7 @@ function updateShadowPreview(loc) {
   const objH = parseFloat(document.getElementById('objHeight').value) || 10;
   const shadowLenM = objH / Math.tan(pos.altitude);
 
+  // Shadow direction = opposite of sun azimuth
   const sunAzDeg = ((pos.azimuth * 180 / Math.PI) + 180) % 360;
   const shadowAzDeg = (sunAzDeg + 180) % 360;
   const shadowRad = shadowAzDeg * Math.PI / 180;
@@ -698,7 +725,7 @@ function updateShadowPreview(loc) {
   const dlng = (shadowLenM * Math.sin(shadowRad)) / mpLng;
   const tipPt = [loc.lat + dlat, loc.lng + dlng];
 
-  // Cone edges: 10° half-angle spread from center
+  // Cone edges: 10° half-angle spread
   const halfAngle = 10 * Math.PI / 180;
   const leftPt  = [loc.lat + (shadowLenM * Math.cos(shadowRad - halfAngle)) / mpLat,
                    loc.lng + (shadowLenM * Math.sin(shadowRad - halfAngle)) / mpLng];
@@ -707,39 +734,22 @@ function updateShadowPreview(loc) {
 
   shadowLayer = L.layerGroup();
 
-  // 1. Semi-transparent dark cone (the shadow area)
+  // 1. Semi-transparent dark cone
   L.polygon([[loc.lat, loc.lng], leftPt, tipPt, rightPt], {
-    color: 'none', fillColor: '#111', fillOpacity: 0.22, weight: 0, interactive: false
+    color: 'none', fillColor: '#111', fillOpacity: 0.20, weight: 0, interactive: false
   }).addTo(shadowLayer);
 
   // 2. Solid center line
   L.polyline([[loc.lat, loc.lng], tipPt], {
-    color: '#222', weight: 2, opacity: 0.8, interactive: false
+    color: '#333', weight: 2, opacity: 0.75, interactive: false
   }).addTo(shadowLayer);
 
-  // 3. Cone edge lines (dashed, subtle)
+  // 3. Subtle cone edge lines
   L.polyline([[loc.lat, loc.lng], leftPt], {
-    color: '#444', weight: 1, opacity: 0.35, dashArray: '4 4', interactive: false
+    color: '#555', weight: 1, opacity: 0.3, dashArray: '4 4', interactive: false
   }).addTo(shadowLayer);
   L.polyline([[loc.lat, loc.lng], rightPt], {
-    color: '#444', weight: 1, opacity: 0.35, dashArray: '4 4', interactive: false
-  }).addTo(shadowLayer);
-
-  // 4. Label at tip
-  const dirStr = azimuthToDir(shadowAzDeg);
-  const lenStr = shadowLenM >= 1000
-    ? `${(shadowLenM / 1000).toFixed(2)}km`
-    : `${Math.round(shadowLenM)}m`;
-
-  const labelIcon = L.divIcon({
-    html: `<div style="background:#000;color:#fff;padding:4px 9px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;white-space:nowrap;transform:translate(-50%,-140%);border-left:3px solid #f4b942;line-height:1.5"><div style="font-size:7px;color:#c8a96e;letter-spacing:.12em;text-transform:uppercase">Shadow</div>${lenStr} ${dirStr}</div>`,
-    iconSize: [0, 0], iconAnchor: [0, 0], className: ''
-  });
-  L.marker(tipPt, { icon: labelIcon, interactive: false }).addTo(shadowLayer);
-
-  // 5. Small golden origin dot (marks the base of the shadow object)
-  L.circleMarker([loc.lat, loc.lng], {
-    radius: 4, color: '#000', fillColor: '#f4b942', fillOpacity: 1, weight: 1.5, interactive: false
+    color: '#555', weight: 1, opacity: 0.3, dashArray: '4 4', interactive: false
   }).addTo(shadowLayer);
 
   shadowLayer.addTo(map);
@@ -782,31 +792,41 @@ function deleteLocation(e, id) {
 
 function renameLocation(e, id) {
   e.stopPropagation();
+  e.preventDefault();
   const loc = state.locations.find(l => l.id === id);
   if (!loc) return;
-  const el = e.target;
+  const el = e.currentTarget;
+  if (el.contentEditable === 'true') return; // already editing
+
   const oldName = loc.name;
   el.contentEditable = 'true';
   el.focus();
+
   // Select all text
   const range = document.createRange();
   range.selectNodeContents(el);
   window.getSelection().removeAllRanges();
   window.getSelection().addRange(range);
 
-  const finish = () => {
+  function finish() {
+    if (el.contentEditable !== 'true') return;
     el.contentEditable = 'false';
     const newName = el.textContent.trim() || oldName;
     loc.name = newName;
     el.textContent = newName;
     updateOverlayText(activeLoc());
     saveState();
-    showToast('Renamed');
-  };
+    if (newName !== oldName) showToast('Renamed → ' + newName);
+  }
+
   el.onblur = finish;
   el.onkeydown = ke => {
     if (ke.key === 'Enter') { ke.preventDefault(); el.blur(); }
-    if (ke.key === 'Escape') { el.textContent = oldName; el.contentEditable = 'false'; }
+    if (ke.key === 'Escape') {
+      el.contentEditable = 'false';
+      el.textContent = oldName;
+      el.onblur = null;
+    }
   };
 }
 
@@ -823,15 +843,20 @@ function renderLocList() {
     el.innerHTML = `<div style="padding:20px 16px;font-family:var(--font-m);font-size:10px;color:var(--gray-400);letter-spacing:.08em;text-align:center;text-transform:uppercase">No locations yet<br>Search or click map</div>`;
     return;
   }
-  el.innerHTML = state.locations.map((loc,i) => `
-    <div class="loc-item ${loc.id===state.activeLocId?'active':''}" onclick="selectLocation('${loc.id}')">
+  el.innerHTML = state.locations.map((loc,i) => {
+    const isActive = loc.id === state.activeLocId;
+    return `
+    <div class="loc-item ${isActive?'active':''}"
+         ${isActive ? '' : `onclick="selectLocation('${loc.id}')"`}>
       <div class="loc-num">LOCATION ${String(i+1).padStart(2,'0')}</div>
-      <div class="loc-name" ondblclick="renameLocation(event,'${loc.id}')" title="Double-click to rename">${esc(loc.name)}</div>
+      <div class="loc-name"
+           ${isActive ? `ondblclick="renameLocation(event,'${loc.id}')" title="Double-click to rename"` : ''}
+      >${esc(loc.name)}</div>
       <div class="loc-coord">${loc.lat.toFixed(4)}°, ${loc.lng.toFixed(4)}°</div>
       ${loc.notes ? `<div class="loc-meta">📝 ${esc(loc.notes.slice(0,28))}${loc.notes.length>28?'…':''}</div>` : ''}
       <button class="loc-del" onclick="deleteLocation(event,'${loc.id}')" title="Delete">✕</button>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // ================================================================
