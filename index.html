@@ -87,19 +87,29 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
 .sun-path-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:5}
 
 /* ── RIGHT PANEL ── */
-.right{border-left:1px solid var(--black);display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden}
-.right-section{border-bottom:1px solid var(--gray-200);padding:14px 16px}
-.right-section:last-child{border-bottom:none;flex:1}
-.sec-label{font-family:var(--font-m);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray-400);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.right{border-left:1px solid var(--black);display:flex;flex-direction:column;overflow:hidden}
+
+/* ── RIGHT PANEL TABS ── */
+.right-tabs{display:flex;flex-shrink:0;border-bottom:1px solid var(--black);height:30px}
+.rtab{flex:1;font-family:var(--font-m);font-size:9px;letter-spacing:.14em;text-transform:uppercase;background:var(--white);border:none;border-right:1px solid var(--gray-200);cursor:pointer;color:var(--gray-400);transition:background .1s,color .1s;display:flex;align-items:center;justify-content:center;gap:4px}
+.rtab:last-child{border-right:none}
+.rtab:hover{color:var(--black);background:var(--gray-50)}
+.rtab.active{background:var(--black);color:var(--white)}
+.tab-panel{display:none;flex-direction:column;flex:1;overflow-y:auto;overflow-x:hidden}
+.tab-panel.active{display:flex}
+
+.right-section{border-bottom:1px solid var(--gray-200);padding:10px 14px;flex-shrink:0}
+.right-section:last-child{border-bottom:none;flex:1;display:flex;flex-direction:column}
+.sec-label{font-family:var(--font-m);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gray-400);margin-bottom:8px;display:flex;align-items:center;gap:6px}
 .dot{width:5px;height:5px;background:var(--black);border-radius:50%;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* Sun data */
-.sun-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sun-item{padding:8px 10px;border:1px solid var(--gray-100)}
-.sun-item-label{font-family:var(--font-m);font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray-400);margin-bottom:3px}
-.sun-item-val{font-family:var(--font-m);font-size:13px;font-weight:500;color:var(--black)}
-.sun-item-sub{font-family:var(--font-m);font-size:9px;color:var(--gray-600);margin-top:1px}
+.sun-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.sun-item{padding:5px 7px;border:1px solid var(--gray-100)}
+.sun-item-label{font-family:var(--font-m);font-size:7px;letter-spacing:.12em;text-transform:uppercase;color:var(--gray-400);margin-bottom:2px}
+.sun-item-val{font-family:var(--font-m);font-size:12px;font-weight:500;color:var(--black)}
+.sun-item-sub{font-family:var(--font-m);font-size:8px;color:var(--gray-600);margin-top:1px}
 .sun-item.highlight{border-color:var(--black);background:var(--black)}
 .sun-item.highlight .sun-item-label,.sun-item.highlight .sun-item-val,.sun-item.highlight .sun-item-sub{color:var(--white)}
 .sun-item.gold{background:var(--black)}
@@ -107,16 +117,16 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
 .sun-item.gold .sun-item-val{color:var(--white)}
 
 /* Compass */
-.compass-wrap{display:flex;align-items:center;gap:16px;margin-bottom:10px}
-.compass{width:70px;height:70px;position:relative;flex-shrink:0}
+.compass-wrap{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.compass{width:58px;height:58px;position:relative;flex-shrink:0}
 .compass svg{width:100%;height:100%}
 .compass-info{flex:1}
-.compass-deg{font-family:var(--font-d);font-size:32px;letter-spacing:.03em;line-height:1}
+.compass-deg{font-family:var(--font-d);font-size:26px;letter-spacing:.03em;line-height:1}
 .compass-dir{font-family:var(--font-m);font-size:10px;color:var(--gray-600);letter-spacing:.1em}
-.compass-alt{font-family:var(--font-m);font-size:10px;color:var(--gray-400);margin-top:2px}
+.compass-alt{font-family:var(--font-m);font-size:9px;color:var(--gray-400);margin-top:2px}
 
 /* Sun timeline */
-.timeline{position:relative;height:28px;background:var(--gray-100);margin:8px 0;overflow:hidden}
+.timeline{position:relative;height:22px;background:var(--gray-100);margin:6px 0;overflow:hidden}
 .timeline-bar{position:absolute;top:0;bottom:0}
 .tl-night{background:#0a0a0a}
 .tl-astro{background:#1a1a2e}
@@ -128,38 +138,43 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
 .tl-labels{display:flex;justify-content:space-between;font-family:var(--font-m);font-size:8px;color:var(--gray-400);margin-top:2px}
 
 /* Weather */
-.weather-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.weather-day{text-align:center;padding:6px 2px;border:1px solid var(--gray-100);cursor:pointer;transition:all .15s}
+.weather-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.weather-day{text-align:center;padding:4px 2px;border:1px solid var(--gray-100);cursor:pointer;transition:all .15s}
 .weather-day:hover{border-color:var(--gray-400)}
 .weather-day.best{border-color:var(--black);background:var(--black)}
 .weather-day.best .wd-date,.weather-day.best .wd-temp,.weather-day.best .wd-icon,.weather-day.best .wd-score{color:var(--white)}
-.wd-date{font-family:var(--font-m);font-size:8px;letter-spacing:.05em;color:var(--gray-400);margin-bottom:3px}
-.wd-icon{font-size:16px;margin-bottom:2px}
-.wd-temp{font-family:var(--font-m);font-size:10px;font-weight:500}
-.wd-score{font-family:var(--font-m);font-size:8px;color:var(--gray-600);margin-top:2px}
-.weather-now{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px}
-.wn-item{text-align:center;padding:6px;background:var(--gray-50)}
-.wn-label{font-family:var(--font-m);font-size:8px;color:var(--gray-400);letter-spacing:.1em;text-transform:uppercase}
-.wn-val{font-family:var(--font-m);font-size:12px;font-weight:500;margin-top:2px}
+.wd-date{font-family:var(--font-m);font-size:7px;letter-spacing:.05em;color:var(--gray-400);margin-bottom:2px}
+.wd-icon{font-size:14px;margin-bottom:1px}
+.wd-temp{font-family:var(--font-m);font-size:9px;font-weight:500}
+.wd-score{font-family:var(--font-m);font-size:7px;color:var(--gray-600);margin-top:1px}
+.weather-now{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-top:8px}
+.wn-item{text-align:center;padding:5px;background:var(--gray-50)}
+.wn-label{font-family:var(--font-m);font-size:7px;color:var(--gray-400);letter-spacing:.1em;text-transform:uppercase}
+.wn-val{font-family:var(--font-m);font-size:11px;font-weight:500;margin-top:1px}
 
 /* Shadow calculator */
-.shadow-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.shadow-row label{font-family:var(--font-m);font-size:9px;letter-spacing:.12em;color:var(--gray-400);text-transform:uppercase;width:80px;flex-shrink:0}
+.shadow-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.shadow-row label{font-family:var(--font-m);font-size:9px;letter-spacing:.12em;color:var(--gray-400);text-transform:uppercase;width:70px;flex-shrink:0}
 .shadow-row input{flex:1;border:1px solid var(--gray-200);padding:5px 8px;font-family:var(--font-m);font-size:11px;outline:none;transition:border .15s}
 .shadow-row input:focus{border-color:var(--black)}
-.shadow-result{background:var(--black);color:var(--white);padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
-.sr-label{font-family:var(--font-m);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-400)}
-.sr-val{font-family:var(--font-d);font-size:24px;letter-spacing:.04em}
+.shadow-result{background:var(--black);color:var(--white);padding:8px 12px;display:flex;justify-content:space-between;align-items:center}
+.sr-label{font-family:var(--font-m);font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-400)}
+.sr-val{font-family:var(--font-d);font-size:22px;letter-spacing:.04em}
 
 /* Notes */
-.notes-area{width:100%;border:1px solid var(--gray-200);padding:8px 10px;font-family:var(--font-b);font-size:12px;font-weight:300;resize:vertical;min-height:72px;outline:none;transition:border .15s;line-height:1.6}
+.notes-area{width:100%;border:1px solid var(--gray-200);padding:7px 9px;font-family:var(--font-b);font-size:11px;font-weight:300;resize:vertical;min-height:50px;outline:none;transition:border .15s;line-height:1.5}
 .notes-area:focus{border-color:var(--black)}
 
 /* AI section */
-.ai-prompt{width:100%;border:1px solid var(--gray-200);padding:7px 10px;font-family:var(--font-b);font-size:12px;font-weight:300;resize:none;min-height:56px;outline:none;line-height:1.6;transition:border .15s}
+.ai-prompt{width:100%;border:1px solid var(--gray-200);padding:7px 9px;font-family:var(--font-b);font-size:11px;font-weight:300;resize:none;height:52px;outline:none;line-height:1.5;transition:border .15s}
 .ai-prompt:focus{border-color:var(--black)}
-.ai-result{font-size:12px;line-height:1.7;color:var(--gray-800);margin-top:8px;font-weight:300}
-.ai-status{font-family:var(--font-m);font-size:9px;color:var(--gray-400);letter-spacing:.08em;min-height:14px;margin:4px 0}
+.ai-result{font-size:11px;line-height:1.65;color:var(--gray-800);margin-top:8px;font-weight:300;overflow-y:auto;max-height:160px}
+.ai-status{font-family:var(--font-m);font-size:9px;color:var(--gray-400);letter-spacing:.08em;min-height:13px;margin:3px 0}
+/* API key row */
+.ai-key-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+.ai-key-field{flex:1;border:1px solid var(--gray-200);padding:5px 8px;font-family:var(--font-m);font-size:10px;outline:none;letter-spacing:.04em;background:var(--white);color:var(--black)}
+.ai-key-field:focus{border-color:var(--black)}
+.ai-key-status{font-family:var(--font-m);font-size:8px;letter-spacing:.07em;color:var(--gray-400);min-height:12px;margin-bottom:4px}
 
 /* Toast */
 .toast{position:fixed;bottom:24px;right:24px;z-index:500;background:var(--black);color:var(--white);padding:10px 18px;font-family:var(--font-m);font-size:10px;letter-spacing:.1em;text-transform:uppercase;opacity:0;transform:translateY(8px);transition:all .2s;pointer-events:none}
@@ -250,117 +265,140 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
   <!-- RIGHT PANEL -->
   <div class="right" id="rightPanel">
 
-    <!-- Sun position -->
-    <div class="right-section">
-      <div class="sec-label"><div class="dot"></div> Sun Position</div>
-      <div class="compass-wrap">
-        <div class="compass">
-          <svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="35" cy="35" r="33" fill="none" stroke="#e0e0e0" stroke-width="1"/>
-            <text x="35" y="8" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">N</text>
-            <text x="35" y="65" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">S</text>
-            <text x="8" y="38" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">W</text>
-            <text x="62" y="38" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">E</text>
-            <line id="sunNeedle" x1="35" y1="35" x2="35" y2="10" stroke="#000" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="35" cy="35" r="3" fill="#000"/>
-          </svg>
-        </div>
-        <div class="compass-info">
-          <div class="compass-deg" id="sunAzimuth">—°</div>
-          <div class="compass-dir" id="sunDirection">—</div>
-          <div class="compass-alt" id="sunAltitude">Altitude: —°</div>
-        </div>
-      </div>
-
-      <div class="sun-grid">
-        <div class="sun-item gold" id="magicHourItem">
-          <div class="sun-item-label">Golden Hour ↑</div>
-          <div class="sun-item-val" id="goldenRise">—</div>
-          <div class="sun-item-sub" id="goldenRiseDur">—</div>
-        </div>
-        <div class="sun-item gold">
-          <div class="sun-item-label">Golden Hour ↓</div>
-          <div class="sun-item-val" id="goldenSet">—</div>
-          <div class="sun-item-sub" id="goldenSetDur">—</div>
-        </div>
-        <div class="sun-item">
-          <div class="sun-item-label">Blue Hour ↑</div>
-          <div class="sun-item-val" id="blueRise">—</div>
-        </div>
-        <div class="sun-item">
-          <div class="sun-item-label">Blue Hour ↓</div>
-          <div class="sun-item-val" id="blueSet">—</div>
-        </div>
-        <div class="sun-item">
-          <div class="sun-item-label">Sunrise</div>
-          <div class="sun-item-val" id="sunrise">—</div>
-        </div>
-        <div class="sun-item">
-          <div class="sun-item-label">Sunset</div>
-          <div class="sun-item-val" id="sunset">—</div>
-        </div>
-        <div class="sun-item">
-          <div class="sun-item-label">Solar Noon</div>
-          <div class="sun-item-val" id="solarNoon">—</div>
-        </div>
-        <div class="sun-item">
-          <div class="sun-item-label">Day Length</div>
-          <div class="sun-item-val" id="dayLength">—</div>
-        </div>
-      </div>
-
-      <!-- Timeline -->
-      <div style="margin-top:10px">
-        <div class="panel-label">Light Timeline</div>
-        <div class="timeline" id="lightTimeline"></div>
-        <div class="tl-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
-      </div>
+    <!-- Tab bar -->
+    <div class="right-tabs">
+      <button class="rtab active" id="rtabLight" onclick="switchTab('light')">☀ Light</button>
+      <button class="rtab" id="rtabWeather" onclick="switchTab('weather')">☁ Weather</button>
+      <button class="rtab" id="rtabTools" onclick="switchTab('tools')">◈ Tools</button>
     </div>
 
-    <!-- Weather -->
-    <div class="right-section">
-      <div class="sec-label">7-Day Forecast</div>
-      <div class="weather-grid" id="weatherGrid">
-        <div style="grid-column:1/-1;font-family:var(--font-m);font-size:10px;color:var(--gray-400);text-align:center;padding:10px">Select a location to load weather</div>
-      </div>
-      <div class="weather-now" id="weatherNow"></div>
-    </div>
-
-    <!-- Shadow calculator -->
-    <div class="right-section">
-      <div class="sec-label">Shadow Calculator</div>
-      <div class="shadow-row">
-        <label>Object H.</label>
-        <input type="number" id="objHeight" value="10" min="0.1" max="999" step="0.1" oninput="calcShadow()"> m
-      </div>
-      <div class="shadow-result">
-        <div>
-          <div class="sr-label">Shadow Length</div>
-          <div class="sr-val" id="shadowLen">— m</div>
+    <!-- ── TAB: LIGHT ── -->
+    <div class="tab-panel active" id="tabLight">
+      <div class="right-section" style="flex:1;overflow-y:auto">
+        <div class="sec-label"><div class="dot"></div> Sun Position</div>
+        <div class="compass-wrap">
+          <div class="compass">
+            <svg viewBox="0 0 70 70" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="35" cy="35" r="33" fill="none" stroke="#e0e0e0" stroke-width="1"/>
+              <text x="35" y="8" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">N</text>
+              <text x="35" y="65" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">S</text>
+              <text x="8" y="38" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">W</text>
+              <text x="62" y="38" text-anchor="middle" font-family="DM Mono,monospace" font-size="7" fill="#aaa">E</text>
+              <line id="sunNeedle" x1="35" y1="35" x2="35" y2="10" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="35" cy="35" r="3" fill="#000"/>
+            </svg>
+          </div>
+          <div class="compass-info">
+            <div class="compass-deg" id="sunAzimuth">—°</div>
+            <div class="compass-dir" id="sunDirection">—</div>
+            <div class="compass-alt" id="sunAltitude">Alt: —°</div>
+          </div>
         </div>
-        <div>
-          <div class="sr-label">Direction</div>
-          <div class="sr-val" id="shadowDir">—</div>
+
+        <div class="sun-grid">
+          <div class="sun-item gold">
+            <div class="sun-item-label">Golden ↑</div>
+            <div class="sun-item-val" id="goldenRise">—</div>
+            <div class="sun-item-sub" id="goldenRiseDur">—</div>
+          </div>
+          <div class="sun-item gold">
+            <div class="sun-item-label">Golden ↓</div>
+            <div class="sun-item-val" id="goldenSet">—</div>
+            <div class="sun-item-sub" id="goldenSetDur">—</div>
+          </div>
+          <div class="sun-item">
+            <div class="sun-item-label">Sunrise</div>
+            <div class="sun-item-val" id="sunrise">—</div>
+          </div>
+          <div class="sun-item">
+            <div class="sun-item-label">Sunset</div>
+            <div class="sun-item-val" id="sunset">—</div>
+          </div>
+          <div class="sun-item">
+            <div class="sun-item-label">Blue ↑</div>
+            <div class="sun-item-val" id="blueRise">—</div>
+          </div>
+          <div class="sun-item">
+            <div class="sun-item-label">Blue ↓</div>
+            <div class="sun-item-val" id="blueSet">—</div>
+          </div>
+          <div class="sun-item">
+            <div class="sun-item-label">Solar Noon</div>
+            <div class="sun-item-val" id="solarNoon">—</div>
+          </div>
+          <div class="sun-item">
+            <div class="sun-item-label">Day Length</div>
+            <div class="sun-item-val" id="dayLength">—</div>
+          </div>
+        </div>
+
+        <div style="margin-top:8px">
+          <div class="panel-label">Light Timeline</div>
+          <div class="timeline" id="lightTimeline"></div>
+          <div class="tl-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
         </div>
       </div>
     </div>
 
-    <!-- Notes -->
-    <div class="right-section">
-      <div class="sec-label">Location Notes</div>
-      <textarea class="notes-area" id="locNotes" placeholder="Access info, permits, contact details..." oninput="saveNoteForLocation()"></textarea>
+    <!-- ── TAB: WEATHER ── -->
+    <div class="tab-panel" id="tabWeather">
+      <div class="right-section" style="flex:1;overflow-y:auto">
+        <div class="sec-label">7-Day Forecast</div>
+        <div class="weather-grid" id="weatherGrid">
+          <div style="grid-column:1/-1;font-family:var(--font-m);font-size:10px;color:var(--gray-400);text-align:center;padding:10px">Select a location</div>
+        </div>
+        <div class="weather-now" id="weatherNow"></div>
+      </div>
     </div>
 
-    <!-- AI Suggest -->
-    <div class="right-section">
-      <div class="sec-label"><div class="dot"></div> AI Scout Advisor</div>
-      <textarea class="ai-prompt" id="aiPromptInput" placeholder="Describe your scene (e.g. 'dramatic sunrise shot for a car commercial, need long shadows...')" rows="3"></textarea>
-      <div class="ai-status" id="aiStatus"></div>
-      <button class="hbtn" id="aiAnalyzeBtn" style="width:100%;font-size:10px;margin-top:4px" onclick="runAI()">Analyze &amp; Suggest ↗</button>
-      <div class="ai-result" id="aiResult"></div>
-    </div>
+    <!-- ── TAB: TOOLS ── -->
+    <div class="tab-panel" id="tabTools">
 
-  </div>
+      <!-- Shadow calculator -->
+      <div class="right-section">
+        <div class="sec-label">Shadow Calculator</div>
+        <div class="shadow-row">
+          <label>Object H.</label>
+          <input type="number" id="objHeight" value="10" min="0.1" max="999" step="0.1" oninput="calcShadow()"> m
+        </div>
+        <div class="shadow-result">
+          <div>
+            <div class="sr-label">Shadow Length</div>
+            <div class="sr-val" id="shadowLen">— m</div>
+          </div>
+          <div>
+            <div class="sr-label">Direction</div>
+            <div class="sr-val" id="shadowDir">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="right-section">
+        <div class="sec-label">Location Notes</div>
+        <textarea class="notes-area" id="locNotes" placeholder="Access info, permits, contact details..." oninput="saveNoteForLocation()"></textarea>
+      </div>
+
+      <!-- AI Suggest -->
+      <div class="right-section" style="flex:1;overflow-y:auto">
+        <div class="sec-label">
+          <div class="dot"></div> AI Scout Advisor
+          <button onclick="toggleApiKeyRow()" title="API Key settings" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:11px;color:var(--gray-400);padding:0;line-height:1">🔑</button>
+        </div>
+        <div class="ai-key-row" id="aiKeyRow" style="display:none">
+          <input type="password" id="aiKeyInput" class="ai-key-field" placeholder="sk-ant-api…">
+          <button class="hbtn" style="flex-shrink:0;padding:5px 10px" onclick="saveApiKey()">Set</button>
+        </div>
+        <div class="ai-key-status" id="aiKeyStatus"></div>
+        <textarea class="ai-prompt" id="aiPromptInput" placeholder="Describe your scene (e.g. 'dramatic sunrise for car commercial…')"></textarea>
+        <div class="ai-status" id="aiStatus"></div>
+        <button class="hbtn" id="aiAnalyzeBtn" style="width:100%;font-size:10px;margin-top:4px" onclick="runAI()">Analyze &amp; Suggest ↗</button>
+        <div class="ai-result" id="aiResult"></div>
+      </div>
+
+    </div><!-- /tabTools -->
+
+  </div><!-- /right -->
 </div>
 
 <div class="toast" id="toast"></div>
@@ -378,6 +416,50 @@ let state = {
 };
 let map, markers = {}, sunPathLayer = null;
 let addMode = false, showSunPath = true;
+
+// ================================================================
+//  TAB NAVIGATION
+// ================================================================
+function switchTab(name) {
+  ['Light','Weather','Tools'].forEach(t => {
+    document.getElementById('tab'+t).classList.toggle('active', t.toLowerCase()===name);
+    document.getElementById('rtab'+t).classList.toggle('active', t.toLowerCase()===name);
+  });
+}
+
+// ================================================================
+//  API KEY MANAGEMENT
+// ================================================================
+function getApiKey() { return localStorage.getItem('ls_api_key_v1') || ''; }
+
+function saveApiKey() {
+  const k = document.getElementById('aiKeyInput').value.trim();
+  if (k) localStorage.setItem('ls_api_key_v1', k);
+  else localStorage.removeItem('ls_api_key_v1');
+  document.getElementById('aiKeyInput').value = '';
+  document.getElementById('aiKeyRow').style.display = 'none';
+  updateAiKeyStatus();
+  showToast(k ? 'API key saved' : 'API key cleared');
+}
+
+function toggleApiKeyRow() {
+  const row = document.getElementById('aiKeyRow');
+  row.style.display = row.style.display === 'none' ? 'flex' : 'none';
+  if (row.style.display === 'flex') document.getElementById('aiKeyInput').focus();
+}
+
+function updateAiKeyStatus() {
+  const el = document.getElementById('aiKeyStatus');
+  if (!el) return;
+  const key = getApiKey();
+  if (key) {
+    el.textContent = '🔑 API key configured';
+    el.style.color = 'var(--gray-600)';
+  } else {
+    el.textContent = 'No API key — tap 🔑 to configure for standalone use';
+    el.style.color = 'var(--gray-400)';
+  }
+}
 
 // ================================================================
 //  INIT
@@ -413,6 +495,7 @@ function init() {
       updateOverlayText(loc);
     }
   }
+  updateAiKeyStatus();
 }
 
 // ================================================================
@@ -600,34 +683,65 @@ function updateShadowPreview(loc) {
   const dt = getShootDateTime();
   const pos = SunCalc.getPosition(dt, loc.lat, loc.lng);
   const altDeg = pos.altitude * 180 / Math.PI;
-
-  if (altDeg <= 0) return; // Sun below horizon, no shadow to draw
+  if (altDeg <= 0) return; // Sun below horizon
 
   const objH = parseFloat(document.getElementById('objHeight').value) || 10;
   const shadowLenM = objH / Math.tan(pos.altitude);
 
-  // Shadow falls opposite to the sun direction
-  const azDeg = ((pos.azimuth * 180 / Math.PI) + 180) % 360;
-  const shadowAzDeg = (azDeg + 180) % 360;
+  const sunAzDeg = ((pos.azimuth * 180 / Math.PI) + 180) % 360;
+  const shadowAzDeg = (sunAzDeg + 180) % 360;
   const shadowRad = shadowAzDeg * Math.PI / 180;
 
-  // Convert meters to approximate lat/lng delta
-  const metersPerDegLat = 111320;
-  const metersPerDegLng = 111320 * Math.cos(loc.lat * Math.PI / 180);
-  const dlat = (shadowLenM * Math.cos(shadowRad)) / metersPerDegLat;
-  const dlng = (shadowLenM * Math.sin(shadowRad)) / metersPerDegLng;
+  const mpLat = 111320;
+  const mpLng = 111320 * Math.cos(loc.lat * Math.PI / 180);
+  const dlat = (shadowLenM * Math.cos(shadowRad)) / mpLat;
+  const dlng = (shadowLenM * Math.sin(shadowRad)) / mpLng;
+  const tipPt = [loc.lat + dlat, loc.lng + dlng];
 
-  const endPt = [loc.lat + dlat, loc.lng + dlng];
+  // Cone edges: 10° half-angle spread from center
+  const halfAngle = 10 * Math.PI / 180;
+  const leftPt  = [loc.lat + (shadowLenM * Math.cos(shadowRad - halfAngle)) / mpLat,
+                   loc.lng + (shadowLenM * Math.sin(shadowRad - halfAngle)) / mpLng];
+  const rightPt = [loc.lat + (shadowLenM * Math.cos(shadowRad + halfAngle)) / mpLat,
+                   loc.lng + (shadowLenM * Math.sin(shadowRad + halfAngle)) / mpLng];
 
   shadowLayer = L.layerGroup();
-  // Shadow line (dashed, grey)
-  L.polyline([[loc.lat, loc.lng], endPt], {
-    color: '#444', weight: 4, opacity: 0.65, dashArray: '8 5'
+
+  // 1. Semi-transparent dark cone (the shadow area)
+  L.polygon([[loc.lat, loc.lng], leftPt, tipPt, rightPt], {
+    color: 'none', fillColor: '#111', fillOpacity: 0.22, weight: 0, interactive: false
   }).addTo(shadowLayer);
-  // Shadow tip dot
-  L.circleMarker(endPt, {
-    radius: 5, color: '#000', fillColor: '#666', fillOpacity: 0.8, weight: 2
+
+  // 2. Solid center line
+  L.polyline([[loc.lat, loc.lng], tipPt], {
+    color: '#222', weight: 2, opacity: 0.8, interactive: false
   }).addTo(shadowLayer);
+
+  // 3. Cone edge lines (dashed, subtle)
+  L.polyline([[loc.lat, loc.lng], leftPt], {
+    color: '#444', weight: 1, opacity: 0.35, dashArray: '4 4', interactive: false
+  }).addTo(shadowLayer);
+  L.polyline([[loc.lat, loc.lng], rightPt], {
+    color: '#444', weight: 1, opacity: 0.35, dashArray: '4 4', interactive: false
+  }).addTo(shadowLayer);
+
+  // 4. Label at tip
+  const dirStr = azimuthToDir(shadowAzDeg);
+  const lenStr = shadowLenM >= 1000
+    ? `${(shadowLenM / 1000).toFixed(2)}km`
+    : `${Math.round(shadowLenM)}m`;
+
+  const labelIcon = L.divIcon({
+    html: `<div style="background:#000;color:#fff;padding:4px 9px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;white-space:nowrap;transform:translate(-50%,-140%);border-left:3px solid #f4b942;line-height:1.5"><div style="font-size:7px;color:#c8a96e;letter-spacing:.12em;text-transform:uppercase">Shadow</div>${lenStr} ${dirStr}</div>`,
+    iconSize: [0, 0], iconAnchor: [0, 0], className: ''
+  });
+  L.marker(tipPt, { icon: labelIcon, interactive: false }).addTo(shadowLayer);
+
+  // 5. Small golden origin dot (marks the base of the shadow object)
+  L.circleMarker([loc.lat, loc.lng], {
+    radius: 4, color: '#000', fillColor: '#f4b942', fillOpacity: 1, weight: 1.5, interactive: false
+  }).addTo(shadowLayer);
+
   shadowLayer.addTo(map);
 }
 
@@ -758,7 +872,7 @@ function updateSunData(lat, lng) {
 
   document.getElementById('sunAzimuth').textContent = azDeg.toFixed(1) + '°';
   document.getElementById('sunDirection').textContent = azimuthToDir(azDeg);
-  document.getElementById('sunAltitude').textContent = `Altitude: ${altDeg.toFixed(1)}°`;
+  document.getElementById('sunAltitude').textContent = `Alt: ${altDeg.toFixed(1)}°`;
 
   // Rotate needle
   const needle = document.getElementById('sunNeedle');
@@ -984,18 +1098,16 @@ async function runAI() {
     contextParts.push(`Golden Hour: ${formatTime(times.goldenHour)}–${formatTime(times.sunset)}`);
     contextParts.push(`Sunrise: ${formatTime(times.sunrise)}, Sunset: ${formatTime(times.sunset)}`);
     const objH = parseFloat(document.getElementById('objHeight').value) || 10;
-    if (altDeg > 0) {
-      const posObj = SunCalc.getPosition(dt, loc.lat, loc.lng);
-      const shadowM = (objH / Math.tan(posObj.altitude)).toFixed(1);
-      contextParts.push(`Shadow (${objH}m object): ${shadowM}m`);
+    if (+altDeg > 0) {
+      contextParts.push(`Shadow (${objH}m object): ${(objH / Math.tan(pos.altitude)).toFixed(1)}m`);
     }
   }
 
   try {
-    const systemPrompt = `You are an expert cinematography location scout and director of photography. 
+    const systemPrompt = `You are an expert cinematography location scout and director of photography.
 Analyze the location data and scene requirements provided. Give concise, practical advice about:
 1. Best shooting times based on sun position
-2. Camera angles that use the light effectively  
+2. Camera angles that use the light effectively
 3. Potential challenges and solutions
 4. Specific timing recommendations
 Keep response under 200 words. Be specific and practical.`;
@@ -1004,23 +1116,54 @@ Keep response under 200 words. Be specific and practical.`;
       ? `Scene: ${prompt}\n\nLocation data:\n${contextParts.join('\n')}`
       : `Scene: ${prompt}`;
 
+    // Build headers — always include version; add API key if configured
+    const headers = {
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01',
+    };
+    const apiKey = getApiKey();
+    if (apiKey) headers['x-api-key'] = apiKey;
+
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      headers,
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         system: systemPrompt,
-        messages: [{role:'user', content: userMsg}]
+        messages: [{ role: 'user', content: userMsg }]
       })
     });
+
+    // Handle non-OK responses with useful messages
+    if (!res.ok) {
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errData = await res.json();
+        errMsg = errData?.error?.message || errMsg;
+      } catch(_) {}
+      if (res.status === 401 || res.status === 403) {
+        document.getElementById('aiKeyRow').style.display = 'flex';
+        document.getElementById('aiKeyInput').focus();
+        throw new Error('Invalid or missing API key');
+      }
+      throw new Error(errMsg);
+    }
+
     const data = await res.json();
-    const text = data.content?.map(b => b.text||'').join('') || 'No response';
+    const text = data.content?.map(b => b.text || '').join('') || 'No response';
     document.getElementById('aiResult').textContent = text;
     document.getElementById('aiStatus').textContent = '✓ Analysis complete';
   } catch(e) {
-    document.getElementById('aiStatus').textContent = '✗ Error — please try again';
+    const msg = e.message || 'Unknown error';
+    document.getElementById('aiStatus').textContent = `✗ ${msg}`;
     document.getElementById('aiResult').textContent = '';
+    // If no key set, prompt the user
+    if (msg.includes('API key') || msg.includes('fetch') || msg.includes('NetworkError')) {
+      if (!getApiKey()) {
+        document.getElementById('aiKeyRow').style.display = 'flex';
+      }
+    }
   } finally {
     btn.disabled = false;
     btn.textContent = 'Analyze & Suggest ↗';
