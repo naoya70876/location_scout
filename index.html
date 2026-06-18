@@ -170,6 +170,27 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
 .leaflet-control-zoom a{font-family:var(--font-m)!important;font-size:14px!important}
 .custom-pin{width:24px;height:24px;background:var(--black);border:2px solid var(--white);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--white);font-family:var(--font-m);font-size:9px;font-weight:500;box-shadow:0 2px 6px rgba(0,0,0,.3);cursor:pointer}
 .custom-pin.active-pin{background:var(--white);border-color:var(--black);color:var(--black)}
+
+/* ── ADD MODE ── */
+.add-loc-btn.active{border-style:solid;border-color:var(--black);background:var(--black);color:var(--white)}
+#map.add-mode-cursor,#map.add-mode-cursor .leaflet-container{cursor:crosshair!important}
+.map-overlay.add-mode{background:var(--black);border-color:var(--black)}
+.map-overlay.add-mode span{color:var(--white)}
+.map-overlay.add-mode #mapCoords{color:rgba(255,255,255,.55)}
+
+/* ── BUTTON STATES ── */
+.hbtn:disabled{opacity:.45;cursor:not-allowed;pointer-events:none}
+
+/* ── LOCATION RENAME ── */
+.loc-name[contenteditable="true"]{outline:none;border-bottom:1px solid var(--white);min-width:60px;cursor:text}
+.loc-item:not(.active) .loc-name[contenteditable="true"]{border-bottom-color:var(--black)}
+
+/* ── WEATHER DAY CLICK ── */
+.weather-day{cursor:pointer}
+.weather-day.selected{border-color:var(--black);background:var(--gray-100)}
+
+/* ── MAP OVERLAY COORDS ── */
+#mapCoords{font-family:var(--font-m);font-size:9px;color:var(--gray-400);margin-top:3px;min-height:12px;letter-spacing:.04em}
 </style>
 </head>
 <body>
@@ -209,14 +230,15 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
           <input type="time" id="shootTime" onchange="onDateTimeChange()">
         </div>
       </div>
-      <button class="add-loc-btn" onclick="startAddMode()">+ Click map to add location</button>
+      <button class="add-loc-btn" id="btnAddLoc" onclick="startAddMode()">+ Click map to add location</button>
     </div>
   </div>
 
   <!-- MAP -->
   <div class="map-wrap">
     <div class="map-overlay" id="mapOverlay">
-      <span id="overlayText">Click map to add location pin</span>
+      <span id="overlayText">— No location selected</span>
+      <div id="mapCoords"></div>
     </div>
     <div id="map"></div>
     <div class="map-mode-btn">
@@ -334,7 +356,7 @@ header{height:48px;border-bottom:1px solid var(--black);display:flex;align-items
       <div class="sec-label"><div class="dot"></div> AI Scout Advisor</div>
       <textarea class="ai-prompt" id="aiPromptInput" placeholder="Describe your scene (e.g. 'dramatic sunrise shot for a car commercial, need long shadows...')" rows="3"></textarea>
       <div class="ai-status" id="aiStatus"></div>
-      <button class="hbtn" style="width:100%;font-size:10px;margin-top:4px" onclick="runAI()">Analyze &amp; Suggest ↗</button>
+      <button class="hbtn" id="aiAnalyzeBtn" style="width:100%;font-size:10px;margin-top:4px" onclick="runAI()">Analyze &amp; Suggest ↗</button>
       <div class="ai-result" id="aiResult"></div>
     </div>
 
@@ -388,6 +410,7 @@ function init() {
       updateSunData(loc.lat, loc.lng);
       fetchWeather(loc.lat, loc.lng);
       document.getElementById('locNotes').value = loc.notes || '';
+      updateOverlayText(loc);
     }
   }
 }
@@ -396,7 +419,10 @@ function init() {
 //  MAP
 // ================================================================
 function initMap() {
-  map = L.map('map', { zoomControl: true }).setView([35.6812, 139.7671], 12);
+  map = L.map('map', { zoomControl: false }).setView([35.6812, 139.7671], 12);
+
+  // Move zoom to top-right so it doesn't overlap the status overlay at top-left
+  L.control.zoom({ position: 'topright' }).addTo(map);
 
   // Black and white tile layer
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -405,12 +431,13 @@ function initMap() {
   }).addTo(map);
 
   map.on('click', onMapClick);
+  map.on('mousemove', onMapMouseMove);
 
   // Re-add existing location markers
   state.locations.forEach(loc => addMarker(loc));
   if (state.activeLocId) {
     const loc = state.locations.find(l => l.id === state.activeLocId);
-    if (loc) { map.setView([loc.lat, loc.lng], 14); updateSunPath(loc); }
+    if (loc) { map.setView([loc.lat, loc.lng], 14); updateSunPath(loc); updateOverlayText(loc); }
   }
 }
 
@@ -421,13 +448,31 @@ function onMapClick(e) {
   const loc = { id, lat, lng, name: `Location ${state.locations.length + 1}`, notes: '' };
   state.locations.push(loc);
   state.activeLocId = id;
-  addMode = false;
-  document.getElementById('mapOverlay').querySelector('span').textContent = 'Click map to add location pin';
-  document.getElementById('addModeIndicator') && document.getElementById('addModeIndicator').remove();
+  endAddMode();
   addMarker(loc);
   selectLocation(id);
   saveState();
-  showToast('Location added');
+  showToast('Location added — double-click name to rename');
+}
+
+// Map mouse move: show coordinates when in addMode
+function onMapMouseMove(e) {
+  if (!addMode) return;
+  const { lat, lng } = e.latlng;
+  document.getElementById('mapCoords').textContent =
+    `${lat.toFixed(5)}°, ${lng.toFixed(5)}°`;
+}
+
+// Update the map overlay text to show active location name
+function updateOverlayText(loc) {
+  if (!loc) {
+    document.getElementById('overlayText').textContent = '— No location selected';
+    document.getElementById('mapCoords').textContent = '';
+    return;
+  }
+  document.getElementById('overlayText').textContent = loc.name;
+  document.getElementById('mapCoords').textContent =
+    `${loc.lat.toFixed(4)}°, ${loc.lng.toFixed(4)}°`;
 }
 
 function addMarker(loc) {
@@ -450,9 +495,31 @@ function refreshMarkers() {
 }
 
 function startAddMode() {
+  if (addMode) { endAddMode(); return; } // toggle off if already active
   addMode = true;
-  document.getElementById('mapOverlay').querySelector('span').textContent = '📍 Click on map to place pin';
-  showToast('Click on the map to add a pin');
+  const mapEl = document.getElementById('map');
+  const overlay = document.getElementById('mapOverlay');
+  const addBtn = document.getElementById('btnAddLoc');
+  mapEl.classList.add('add-mode-cursor');
+  overlay.classList.add('add-mode');
+  document.getElementById('overlayText').textContent = '📍 Click map to place pin';
+  document.getElementById('mapCoords').textContent = 'ESC to cancel';
+  addBtn.classList.add('active');
+  addBtn.textContent = '✕ Cancel add mode';
+  showToast('Click anywhere on the map to add a pin');
+}
+
+function endAddMode() {
+  addMode = false;
+  const mapEl = document.getElementById('map');
+  const overlay = document.getElementById('mapOverlay');
+  const addBtn = document.getElementById('btnAddLoc');
+  mapEl.classList.remove('add-mode-cursor');
+  overlay.classList.remove('add-mode');
+  addBtn.classList.remove('active');
+  addBtn.textContent = '+ Click map to add location';
+  const loc = activeLoc();
+  updateOverlayText(loc || null);
 }
 
 function toggleSunPath() {
@@ -510,8 +577,58 @@ function updateSunPath(loc) {
   group.addTo(map);
 }
 
+let shadowMode = false;
+let shadowLayer = null;
+
 function toggleShadowMode() {
-  showToast('Adjust object height in Shadow Calculator →');
+  shadowMode = !shadowMode;
+  document.getElementById('btnShadow').classList.toggle('active', shadowMode);
+  if (!shadowMode) {
+    if (shadowLayer) { map.removeLayer(shadowLayer); shadowLayer = null; }
+    showToast('Shadow preview off');
+  } else {
+    const loc = activeLoc();
+    if (loc) updateShadowPreview(loc);
+    else showToast('Select a location first');
+  }
+}
+
+function updateShadowPreview(loc) {
+  if (!shadowMode || !loc) return;
+  if (shadowLayer) { map.removeLayer(shadowLayer); shadowLayer = null; }
+
+  const dt = getShootDateTime();
+  const pos = SunCalc.getPosition(dt, loc.lat, loc.lng);
+  const altDeg = pos.altitude * 180 / Math.PI;
+
+  if (altDeg <= 0) return; // Sun below horizon, no shadow to draw
+
+  const objH = parseFloat(document.getElementById('objHeight').value) || 10;
+  const shadowLenM = objH / Math.tan(pos.altitude);
+
+  // Shadow falls opposite to the sun direction
+  const azDeg = ((pos.azimuth * 180 / Math.PI) + 180) % 360;
+  const shadowAzDeg = (azDeg + 180) % 360;
+  const shadowRad = shadowAzDeg * Math.PI / 180;
+
+  // Convert meters to approximate lat/lng delta
+  const metersPerDegLat = 111320;
+  const metersPerDegLng = 111320 * Math.cos(loc.lat * Math.PI / 180);
+  const dlat = (shadowLenM * Math.cos(shadowRad)) / metersPerDegLat;
+  const dlng = (shadowLenM * Math.sin(shadowRad)) / metersPerDegLng;
+
+  const endPt = [loc.lat + dlat, loc.lng + dlng];
+
+  shadowLayer = L.layerGroup();
+  // Shadow line (dashed, grey)
+  L.polyline([[loc.lat, loc.lng], endPt], {
+    color: '#444', weight: 4, opacity: 0.65, dashArray: '8 5'
+  }).addTo(shadowLayer);
+  // Shadow tip dot
+  L.circleMarker(endPt, {
+    radius: 5, color: '#000', fillColor: '#666', fillOpacity: 0.8, weight: 2
+  }).addTo(shadowLayer);
+  shadowLayer.addTo(map);
 }
 
 // ================================================================
@@ -528,6 +645,8 @@ function selectLocation(id) {
   fetchWeather(loc.lat, loc.lng);
   document.getElementById('locNotes').value = loc.notes || '';
   renderLocList();
+  updateOverlayText(loc);
+  if (shadowMode) updateShadowPreview(loc);
   saveState();
 }
 
@@ -538,11 +657,43 @@ function deleteLocation(e, id) {
   if (state.activeLocId === id) {
     state.activeLocId = state.locations.length ? state.locations[0].id : null;
     if (state.activeLocId) selectLocation(state.activeLocId);
+    else updateOverlayText(null);
   }
   if (sunPathLayer) { map.removeLayer(sunPathLayer); sunPathLayer = null; }
+  if (shadowLayer) { map.removeLayer(shadowLayer); shadowLayer = null; }
   refreshMarkers();
   renderLocList();
   saveState();
+}
+
+function renameLocation(e, id) {
+  e.stopPropagation();
+  const loc = state.locations.find(l => l.id === id);
+  if (!loc) return;
+  const el = e.target;
+  const oldName = loc.name;
+  el.contentEditable = 'true';
+  el.focus();
+  // Select all text
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+
+  const finish = () => {
+    el.contentEditable = 'false';
+    const newName = el.textContent.trim() || oldName;
+    loc.name = newName;
+    el.textContent = newName;
+    updateOverlayText(activeLoc());
+    saveState();
+    showToast('Renamed');
+  };
+  el.onblur = finish;
+  el.onkeydown = ke => {
+    if (ke.key === 'Enter') { ke.preventDefault(); el.blur(); }
+    if (ke.key === 'Escape') { el.textContent = oldName; el.contentEditable = 'false'; }
+  };
 }
 
 function saveNoteForLocation() {
@@ -561,7 +712,7 @@ function renderLocList() {
   el.innerHTML = state.locations.map((loc,i) => `
     <div class="loc-item ${loc.id===state.activeLocId?'active':''}" onclick="selectLocation('${loc.id}')">
       <div class="loc-num">LOCATION ${String(i+1).padStart(2,'0')}</div>
-      <div class="loc-name">${esc(loc.name)}</div>
+      <div class="loc-name" ondblclick="renameLocation(event,'${loc.id}')" title="Double-click to rename">${esc(loc.name)}</div>
       <div class="loc-coord">${loc.lat.toFixed(4)}°, ${loc.lng.toFixed(4)}°</div>
       ${loc.notes ? `<div class="loc-meta">📝 ${esc(loc.notes.slice(0,28))}${loc.notes.length>28?'…':''}</div>` : ''}
       <button class="loc-del" onclick="deleteLocation(event,'${loc.id}')" title="Delete">✕</button>
@@ -683,6 +834,7 @@ function calcShadow() {
   if (altDeg <= 0) {
     document.getElementById('shadowLen').textContent = '∞';
     document.getElementById('shadowDir').textContent = '—';
+    if (shadowLayer) { map.removeLayer(shadowLayer); shadowLayer = null; }
     return;
   }
   const shadowLen = (objH / Math.tan(pos.altitude)).toFixed(1);
@@ -691,6 +843,7 @@ function calcShadow() {
   const shadowAz = (azDeg + 180) % 360;
   document.getElementById('shadowLen').textContent = shadowLen + ' m';
   document.getElementById('shadowDir').textContent = azimuthToDir(shadowAz);
+  if (shadowMode) updateShadowPreview(loc);
 }
 
 // ================================================================
@@ -725,11 +878,16 @@ function renderWeather(data) {
   grid.innerHTML = d.time.map((t, i) => {
     const date = new Date(t + 'T12:00:00');
     const isBest = i === bestIdx;
-    return `<div class="weather-day ${isBest?'best':''}" title="${isBest?'Best shooting day':'Score: '+scores[i]}">
+    const isSelected = t === state.shootDate;
+    let cls = '';
+    if (isBest) cls = 'best';
+    else if (isSelected) cls = 'selected';
+    return `<div class="weather-day ${cls}" onclick="setShootDate('${t}')"
+      title="${isBest ? '★ Best shooting day' : 'Set as shoot date'}">
       <div class="wd-date">${date.toLocaleDateString('en',{weekday:'short'})}<br>${date.getDate()}</div>
       <div class="wd-icon">${wmoIcon(d.weathercode[i])}</div>
       <div class="wd-temp">${Math.round(d.temperature_2m_max[i])}°</div>
-      <div class="wd-score">${isBest?'★ BEST':scores[i]+'pt'}</div>
+      <div class="wd-score">${isBest ? '★ BEST' : scores[i] + 'pt'}</div>
     </div>`;
   }).join('');
 
@@ -740,6 +898,23 @@ function renderWeather(data) {
     <div class="wn-item"><div class="wn-label">Wind</div><div class="wn-val">${d.windspeed_10m_max[0]}km/h</div></div>
     <div class="wn-item"><div class="wn-label">Sunshine</div><div class="wn-val">${Math.round((d.sunshine_duration[0]||0)/3600)}h</div></div>
   `;
+}
+
+function setShootDate(dateStr) {
+  state.shootDate = dateStr;
+  document.getElementById('shootDate').value = dateStr;
+  document.getElementById('headerDate').textContent = formatDateDisplay(dateStr);
+  const loc = activeLoc();
+  if (loc) { updateSunData(loc.lat, loc.lng); updateSunPath(loc); if (shadowMode) updateShadowPreview(loc); }
+  saveState();
+  showToast('Shoot date → ' + formatDateDisplay(dateStr));
+  // Re-render weather to update selected highlight
+  const grid = document.getElementById('weatherGrid');
+  if (grid) {
+    grid.querySelectorAll('.weather-day').forEach((el, i) => {
+      el.classList.toggle('selected', false);
+    });
+  }
 }
 
 function wmoIcon(code) {
@@ -763,7 +938,11 @@ function onDateTimeChange() {
   state.shootTime = document.getElementById('shootTime').value;
   document.getElementById('headerDate').textContent = formatDateDisplay(state.shootDate);
   const loc = activeLoc();
-  if (loc) { updateSunData(loc.lat, loc.lng); updateSunPath(loc); }
+  if (loc) {
+    updateSunData(loc.lat, loc.lng);
+    updateSunPath(loc);
+    if (shadowMode) updateShadowPreview(loc);
+  }
   saveState();
 }
 
@@ -784,7 +963,13 @@ async function runAI() {
   const prompt = document.getElementById('aiPromptInput').value.trim();
   if (!prompt) { showToast('Enter a scene description first'); return; }
   const loc = activeLoc();
-  const btn = document.querySelectorAll('.hbtn')[document.querySelectorAll('.hbtn').length-1];
+  const btn = document.getElementById('aiAnalyzeBtn');
+
+  btn.disabled = true;
+  btn.textContent = 'Analyzing…';
+  document.getElementById('aiStatus').textContent = '';
+  document.getElementById('aiResult').innerHTML =
+    `<span style="font-family:var(--font-m);font-size:9px;color:var(--gray-400)">Processing…</span>`;
 
   const contextParts = [];
   if (loc) {
@@ -798,10 +983,13 @@ async function runAI() {
     contextParts.push(`Sun: Azimuth ${azDeg}° (${azimuthToDir(+azDeg)}), Altitude ${altDeg}°`);
     contextParts.push(`Golden Hour: ${formatTime(times.goldenHour)}–${formatTime(times.sunset)}`);
     contextParts.push(`Sunrise: ${formatTime(times.sunrise)}, Sunset: ${formatTime(times.sunset)}`);
+    const objH = parseFloat(document.getElementById('objHeight').value) || 10;
+    if (altDeg > 0) {
+      const posObj = SunCalc.getPosition(dt, loc.lat, loc.lng);
+      const shadowM = (objH / Math.tan(posObj.altitude)).toFixed(1);
+      contextParts.push(`Shadow (${objH}m object): ${shadowM}m`);
+    }
   }
-
-  document.getElementById('aiStatus').textContent = 'Analyzing...';
-  document.getElementById('aiResult').textContent = '';
 
   try {
     const systemPrompt = `You are an expert cinematography location scout and director of photography. 
@@ -831,7 +1019,11 @@ Keep response under 200 words. Be specific and practical.`;
     document.getElementById('aiResult').textContent = text;
     document.getElementById('aiStatus').textContent = '✓ Analysis complete';
   } catch(e) {
-    document.getElementById('aiStatus').textContent = 'Error — please try again';
+    document.getElementById('aiStatus').textContent = '✗ Error — please try again';
+    document.getElementById('aiResult').textContent = '';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Analyze & Suggest ↗';
   }
 }
 
@@ -963,7 +1155,7 @@ function azimuthToDir(deg) {
 //  EVENT LISTENERS
 // ================================================================
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { addMode = false; }
+  if (e.key === 'Escape') { if (addMode) endAddMode(); }
   if ((e.metaKey||e.ctrlKey) && e.key === 's') { e.preventDefault(); saveState(); showToast('Saved'); }
 });
 
